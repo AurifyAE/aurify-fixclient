@@ -35,7 +35,7 @@ Get these from FXCubic (ask your onboarding contact):
    your QuickFIX/J dependency expects it — check the quickfixj-messages-fix43 jar).
 4. Run it:
    ```
-   mvn compile exec:java -Dexec.mainClass=com.yourorg.fixgateway.manualtest.ManualFirstOrderTest
+   mvn compile exec:java -Dexec.mainClass=manualtest.com.aurify.fixclient.ManualFirstOrderTest
    ```
    (or just run `main()` directly from your IDE)
 
