@@ -1,0 +1,67 @@
+server:
+  port: 8080
+
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+fix-gateway:
+  providers:
+    fxcubic:
+      display-name: "FXCubic"
+      fix-version: "FIX.4.3"
+      sessions:
+        pricing:
+          sender-comp-id: "YOURFIRM_PX"
+          target-comp-id: "FXCUBIC_PX"
+          host: "px.fxcubic.example.com"
+          port: 9001
+          reset-seq-num-on-logon: true
+          persist-messages: false
+          heartbeat-interval-seconds: 30
+          use-ssl: true
+        trading:
+          sender-comp-id: "YOURFIRM_TR"
+          target-comp-id: "FXCUBIC_TR"
+          host: "tr.fxcubic.example.com"
+          port: 9002
+          reset-seq-num-on-logon: false
+          persist-messages: false
+          heartbeat-interval-seconds: 30
+          use-ssl: true
+      startup:
+        subscribe-market-data: true
+        symbols: ["EURUSD", "GBPUSD", "USDJPY"]
+        market-depth: "TOP_OF_BOOK"
+      capabilities:
+        supported-ord-types: ["MARKET", "LIMIT"]
+        supported-tif: ["IOC"]
+      credentials:
+        username: "${FXCUBIC_USERNAME}"
+        password: "${FXCUBIC_PASSWORD}"
+
+  pipeline:
+    inbound-queue-capacity: 10000
+    outbound-queue-capacity: 5000
+    overflow-strategy: DROP_OLDEST
+
+  persistence:
+    mode: in-memory   # in-memory | jdbc
+
+  resilience:
+    circuit-breaker:
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 30s
+    retry:
+      max-attempts: 3
+      backoff-ms: 200

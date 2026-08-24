@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package aurify.lphedge.v1;
+
+option java_multiple_files = true;
+option java_package = "aurify.lphedge.v1";
+option java_outer_classname = "LpHedgeGatewayProto";
+
+service LpHedgeGateway {
+  rpc SubmitMarketOrder (SubmitMarketOrderRequest) returns (SubmitMarketOrderResponse);
+}
+
+message SubmitMarketOrderRequest {
+  string idempotency_key = 1;
+  string order_id = 2;
+  string lp_account_id = 3;
+  string lp_api_key = 4;
+  string symbol = 5;
+  string side = 6;
+  int64 quantity = 7;
+  string order_type = 8;
+  string organization_id = 9;
+  string branch_id = 10;
+  string correlation_id = 11;
+}
+
+message SubmitMarketOrderResponse {
+  bool success = 1;
+  string cl_ord_id = 2;
+  string order_id = 3;
+  string status = 4;
+  double avg_px = 5;
+  double cum_qty = 6;
+  double leaves_qty = 7;
+  bool terminal = 8;
+  string error_code = 9;
+  string error_message = 10;
+}
