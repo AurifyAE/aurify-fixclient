@@ -6,7 +6,8 @@ import com.aurify.fixclient.events.SessionConnectedEvent;
 import com.aurify.fixclient.events.SessionDisconnectedEvent;
 import com.aurify.fixclient.provider.ProviderAdapterRegistry;
 import com.aurify.fixclient.session.DirectSessionControlService;
-import com.aurify.fixclient.session.ProviderSessionRegistry;
+import com.aurify.fixclient.session.LpSessionEntry;
+import com.aurify.fixclient.session.LpSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,7 +28,7 @@ import quickfix.field.Username;
 @RequiredArgsConstructor
 public class GatewayFixApplication implements Application {
 
-    private final ProviderSessionRegistry sessionRegistry;
+    private final LpSessionRegistry lpSessionRegistry;
     private final ProviderAdapterRegistry adapterRegistry;
     private final GatewayMessageCracker messageCracker;
     private final GatewayEventPublisher eventPublisher;
@@ -36,16 +37,15 @@ public class GatewayFixApplication implements Application {
 
     @Override
     public void onCreate(SessionID sessionId) {
+        // The registry entry is written by DynamicSessionManager before the
+        // session is created, so it is already present here.
         log.info("Session created: {}", sessionId);
-        sessionMetadataRegistry.get(sessionId).ifPresentOrElse(
-                meta -> sessionRegistry.register(meta.getProviderName(), meta.getRole(), sessionId),
-                () -> log.warn("No SessionMetadata found for {} - was it configured in application.yml?", sessionId)
-        );
     }
 
     @Override
     public void onLogon(SessionID sessionId) {
         log.info("Logon: {}", sessionId);
+        lpSessionRegistry.findBySessionId(sessionId).ifPresent(LpSessionEntry::markLoggedOn);
         eventPublisher.publish(new SessionConnectedEvent(sessionId));
         adapterRegistry.resolveForSession(sessionId)
                 .ifPresent(adapter -> adapter.onPostLogonStartup(sessionId, sessionControl));
@@ -54,6 +54,9 @@ public class GatewayFixApplication implements Application {
     @Override
     public void onLogout(SessionID sessionId) {
         log.info("Logout: {}", sessionId);
+        // Keep the entry: QuickFIX reconnects on its own, and the order path
+        // calls ensureSession anyway, which rebuilds it if it does not come back.
+        lpSessionRegistry.findBySessionId(sessionId).ifPresent(LpSessionEntry::markDisconnected);
         eventPublisher.publish(new SessionDisconnectedEvent(sessionId));
     }
 
@@ -63,13 +66,17 @@ public class GatewayFixApplication implements Application {
         try {
             if (MsgType.LOGON.equals(message.getHeader().getString(MsgType.FIELD))) {
                 sessionMetadataRegistry.get(sessionId).ifPresent(meta -> {
-                    if (meta.getUsername() != null) {
+                    if (meta.getUsername() != null && !meta.getUsername().isEmpty()) {
                         message.setField(new Username(meta.getUsername()));
                     }
-                    if (meta.getPassword() != null) {
+                    if (meta.getPassword() != null && !meta.getPassword().isEmpty()) {
                         message.setField(new Password(meta.getPassword()));
                     }
                 });
+                // Logon carries tag 554 - never log the message body.
+                log.debug("[{}] {} : Logon (credentials redacted)",
+                        FixMessageDirection.OUTBOUND_ADMIN, sessionId);
+                return;
             }
         } catch (FieldNotFound e) {
             log.error("Missing MsgType on outgoing admin message for {}", sessionId, e);

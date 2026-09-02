@@ -45,18 +45,6 @@ public interface SubmitMarketOrderRequestOrBuilder extends
       getLpAccountIdBytes();
 
   /**
-   * <code>string lp_api_key = 4;</code>
-   * @return The lpApiKey.
-   */
-  java.lang.String getLpApiKey();
-  /**
-   * <code>string lp_api_key = 4;</code>
-   * @return The bytes for lpApiKey.
-   */
-  com.google.protobuf.ByteString
-      getLpApiKeyBytes();
-
-  /**
    * <code>string symbol = 5;</code>
    * @return The symbol.
    */
@@ -133,4 +121,31 @@ public interface SubmitMarketOrderRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCorrelationIdBytes();
+
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   * @return Whether the session field is set.
+   */
+  boolean hasSession();
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   * @return The session.
+   */
+  aurify.lphedge.v1.LpSessionSpec getSession();
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   */
+  aurify.lphedge.v1.LpSessionSpecOrBuilder getSessionOrBuilder();
 }

@@ -3,56 +3,19 @@ package com.aurify.fixclient.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.List;
-import java.util.Map;
-
 /**
- * Binds the "fix-gateway.providers.*" tree from application.yml.
- * Each provider can define a pricing session and/or a trading session -
- * FXCubic requires both, other providers may only need one.
+ * Gateway-wide settings from application.yml.
+ *
+ * Note what is NOT here any more: providers, hosts, comp IDs and credentials.
+ * Those belong to the caller and arrive on every request as an LpSessionSpec,
+ * which is what makes this gateway deployable against any LP without a rebuild.
  */
 @Data
 @ConfigurationProperties(prefix = "fix-gateway")
 public class ProviderProperties {
 
-    private Map<String, Provider> providers;
     private Pipeline pipeline = new Pipeline();
     private Persistence persistence = new Persistence();
-
-    @Data
-    public static class Provider {
-        private String displayName;
-        private String fixVersion;
-        private Map<String, SessionConfig> sessions; // keys: "pricing", "trading"
-        private Startup startup = new Startup();
-        private Credentials credentials;
-    }
-
-    @Data
-    public static class SessionConfig {
-        private String senderCompId;
-        private String targetCompId;
-        private String host;
-        private int port;
-        private boolean resetSeqNumOnLogon;
-        private boolean persistMessages;
-        private int heartbeatIntervalSeconds = 30;
-        private boolean useSsl;
-        private String dataDictionary; // e.g. "FIX43.xml", resolved from classpath
-    }
-
-    @Data
-    public static class Startup {
-        private boolean subscribeMarketData;
-        private List<String> symbols = List.of();
-        private String marketDepth = "TOP_OF_BOOK";
-    }
-
-    @Data
-    public static class Credentials {
-        private String username;
-        private String password;
-    }
 
     @Data
     public static class Pipeline {

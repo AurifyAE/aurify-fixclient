@@ -19,7 +19,8 @@ public class OutboundDispatchPipeline {
     void subscribe() {
         outboundRequestQueue.stream()
                 .publishOn(Schedulers.boundedElastic())
-                .doOnNext(dispatchService::dispatch)
+                .doOnNext(envelope -> dispatchService.dispatch(
+                        envelope.request(), envelope.policy(), envelope.sessionId(), envelope.lpAccountId()))
                 .doOnError(e -> log.error("Outbound pipeline error", e))
                 .retry()
                 .subscribe();

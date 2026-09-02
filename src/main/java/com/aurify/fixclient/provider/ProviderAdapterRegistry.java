@@ -1,6 +1,7 @@
 package com.aurify.fixclient.provider;
 
-import com.aurify.fixclient.session.ProviderSessionRegistry;
+import com.aurify.fixclient.session.LpSessionEntry;
+import com.aurify.fixclient.session.LpSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import quickfix.SessionID;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 public class ProviderAdapterRegistry {
 
     private final List<LiquidityProviderAdapter> adapters;
-    private final ProviderSessionRegistry sessionRegistry;
+    private final LpSessionRegistry sessionRegistry;
 
     private Map<String, LiquidityProviderAdapter> byName;
 
@@ -34,6 +35,8 @@ public class ProviderAdapterRegistry {
     }
 
     public Optional<LiquidityProviderAdapter> resolveForSession(SessionID sessionId) {
-        return sessionRegistry.providerNameOf(sessionId).flatMap(this::resolve);
+        return sessionRegistry.findBySessionId(sessionId)
+                .map(LpSessionEntry::provider)
+                .flatMap(this::resolve);
     }
 }

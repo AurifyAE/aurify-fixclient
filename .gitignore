@@ -1,0 +1,15 @@
+target/
+data/
+*.log
+
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# FIX session credentials and TLS material must never be committed
+.env
+*.pem
+*.key
+*.p12
+*.jks

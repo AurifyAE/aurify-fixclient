@@ -7,32 +7,108 @@ option java_package = "aurify.lphedge.v1";
 option java_outer_classname = "LpHedgeGatewayProto";
 
 service LpHedgeGateway {
+  // Submit a market order. If no live FIX session exists for the LP account in
+  // `session`, the gateway logs on first, then sends the order.
   rpc SubmitMarketOrder (SubmitMarketOrderRequest) returns (SubmitMarketOrderResponse);
+
+  // Establish (or verify) a FIX session without sending an order. Useful as a
+  // "test connection" action when an LP is created/edited in the CRM.
+  rpc EnsureSession (EnsureSessionRequest) returns (SessionStatusResponse);
+
+  // Report the current session state for an LP account without changing it.
+  rpc GetSessionStatus (SessionStatusRequest) returns (SessionStatusResponse);
+
+  // Log out and drop a session. The next order recreates it.
+  rpc CloseSession (CloseSessionRequest) returns (SessionStatusResponse);
+}
+
+// One FIX session's connection parameters. Carries credentials, so this
+// contract REQUIRES mTLS on the gRPC channel.
+message FixSession {
+  string host = 1;
+  int32  port = 2;
+  string sender_comp_id = 3;
+  string target_comp_id = 4;
+  string username = 5;
+  string password = 6;
+  bool   use_ssl = 7;
+  bool   reset_seq_num_on_logon = 8;
+  int32  heartbeat_interval_seconds = 9;
+  string server_name = 10;              // SNI / SSL peer name, optional
+  string start_time = 11;               // FIX session window, default 00:00:00
+  string end_time = 12;                 // FIX session window, default 23:59:59
+}
+
+// Everything the gateway needs to talk to one liquidity provider account.
+// The caller (Node) owns this data; the gateway holds no LP config of its own.
+message LpSessionSpec {
+  string lp_account_id = 1;             // stable key: identifies the session
+  string provider = 2;                  // adapter selector, e.g. "fxcubic"
+  string fix_version = 3;               // e.g. "FIX.4.3"
+  FixSession trading = 4;
+  repeated string allowed_symbols = 5;  // replaces any gateway-side symbol list
+  int64  max_order_size = 6;
+  double max_position_per_symbol = 7;
+  double max_total_exposure = 8;
+  string spec_fingerprint = 9;          // caller-computed; change forces relogon
+
+  // The account identifier AT THE LIQUIDITY PROVIDER, sent as FIX tag 1.
+  // Not lp_account_id: that is our own key and means nothing to the venue.
+  // Left empty, tag 1 is omitted rather than filled with something the LP
+  // will reject.
+  string account = 10;
 }
 
 message SubmitMarketOrderRequest {
+  reserved 4;                           // was lp_api_key; never send credentials per-order
+  reserved "lp_api_key";
+
   string idempotency_key = 1;
   string order_id = 2;
   string lp_account_id = 3;
-  string lp_api_key = 4;
   string symbol = 5;
   string side = 6;
-  int64 quantity = 7;
+  int64  quantity = 7;
   string order_type = 8;
   string organization_id = 9;
   string branch_id = 10;
   string correlation_id = 11;
+  LpSessionSpec session = 12;           // required
 }
 
 message SubmitMarketOrderResponse {
-  bool success = 1;
+  bool   success = 1;
   string cl_ord_id = 2;
   string order_id = 3;
   string status = 4;
   double avg_px = 5;
   double cum_qty = 6;
   double leaves_qty = 7;
-  bool terminal = 8;
+  bool   terminal = 8;
   string error_code = 9;
   string error_message = 10;
+}
+
+message EnsureSessionRequest {
+  LpSessionSpec session = 1;
+}
+
+message SessionStatusRequest {
+  string lp_account_id = 1;
+}
+
+message CloseSessionRequest {
+  string lp_account_id = 1;
+}
+
+message SessionStatusResponse {
+  bool   success = 1;
+  string lp_account_id = 2;
+  string state = 3;                     // ABSENT | CONNECTING | LOGGED_ON | FAILED
+  string session_id = 4;                // QuickFIX SessionID string, if any
+  string spec_fingerprint = 5;
+  int64  logged_on_at_epoch_ms = 6;
+  int64  last_used_at_epoch_ms = 7;
+  string error_code = 8;
+  string error_message = 9;
 }

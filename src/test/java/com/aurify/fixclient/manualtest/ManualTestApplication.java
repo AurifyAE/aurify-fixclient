@@ -18,16 +18,17 @@ import static quickfix.field.HandlInst.AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROK
 class ManualTestApplication implements Application {
 
     private final String testSymbol;
+    private final String username;
+    private final String password;
     private final CountDownLatch logonLatch = new CountDownLatch(1);
     private final CountDownLatch execReportLatch = new CountDownLatch(1);
     private SessionID sessionId;
 
-    // Same demo credentials as ManualFirstOrderTest - kept here so toAdmin can inject them
-    private static final String USERNAME = "Olla_t";
-    private static final String PASSWORD = "5EJsVBC80";
-
-    ManualTestApplication(String testSymbol) {
+    // Credentials are passed in from the environment by ManualFirstOrderTest
+    ManualTestApplication(String testSymbol, String username, String password) {
         this.testSymbol = testSymbol;
+        this.username = username;
+        this.password = password;
     }
 
     void awaitLogon(Duration timeout) throws InterruptedException {
@@ -80,8 +81,8 @@ class ManualTestApplication implements Application {
     public void toAdmin(Message message, SessionID sessionId) {
         try {
             if (MsgType.LOGON.equals(message.getHeader().getString(MsgType.FIELD))) {
-                message.setField(new Username(USERNAME));
-                message.setField(new Password(PASSWORD));
+                message.setField(new Username(username));
+                message.setField(new Password(password));
             }
         } catch (FieldNotFound e) {
             System.err.println("Missing MsgType on outgoing admin message: " + e.getMessage());

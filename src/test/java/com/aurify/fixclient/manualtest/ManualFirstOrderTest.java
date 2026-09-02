@@ -10,7 +10,7 @@ package com.aurify.fixclient.manualtest;
  *   2. We can send a NewOrderSingle
  *   3. We receive an ExecutionReport back
  *
- * Run with: mvn compile exec:java -Dexec.mainClass=com.yourorg.fixgateway.manualtest.ManualFirstOrderTest
+ * Run with: mvn compile exec:java -Dexec.mainClass=com.aurify.fixclient.manualtest.ManualFirstOrderTest
  * (or run main() directly from your IDE)
  *
  * Fill in the placeholders below with the demo credentials FXCubic gives you
@@ -18,20 +18,30 @@ package com.aurify.fixclient.manualtest;
  */
 public class ManualFirstOrderTest {
 
-    // ---- fill these in with values from FXCubic's demo/UAT onboarding ----
-    private static final String SENDER_COMP_ID = "Olla_T";
-    private static final String TARGET_COMP_ID = "FXC_T";
-    private static final String HOST = "95.217.231.38";
-    private static final int PORT = 9121;
-    private static final String USERNAME = "Olla_t";
-    private static final String PASSWORD = "5EJsVBC80";
-    private static final String TEST_SYMBOL = "EURUSD";
+    // ---- supplied via environment, never committed ----
+    // export FIX_TEST_SENDER_COMP_ID=... FIX_TEST_TARGET_COMP_ID=...     //        FIX_TEST_HOST=... FIX_TEST_PORT=...     //        FIX_TEST_USERNAME=... FIX_TEST_PASSWORD=...
+    private static final String SENDER_COMP_ID = required("FIX_TEST_SENDER_COMP_ID");
+    private static final String TARGET_COMP_ID = required("FIX_TEST_TARGET_COMP_ID");
+    private static final String HOST = required("FIX_TEST_HOST");
+    private static final int PORT = Integer.parseInt(required("FIX_TEST_PORT"));
+    private static final String USERNAME = required("FIX_TEST_USERNAME");
+    private static final String PASSWORD = required("FIX_TEST_PASSWORD");
+    private static final String TEST_SYMBOL = System.getenv().getOrDefault("FIX_TEST_SYMBOL", "EURUSD");
     // ------------------------------------------------------------------
+
+    private static String required(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(name + " is not set. This test needs demo LP credentials "
+                    + "from the environment - do not hardcode them.");
+        }
+        return value;
+    }
 
     public static void main(String[] args) throws Exception {
         quickfix.SessionSettings settings = buildSettings();
 
-        ManualTestApplication application = new ManualTestApplication(TEST_SYMBOL);
+        ManualTestApplication application = new ManualTestApplication(TEST_SYMBOL, USERNAME, PASSWORD);
 
         quickfix.MessageStoreFactory storeFactory = new quickfix.FileStoreFactory(settings);
         quickfix.LogFactory logFactory = new quickfix.ScreenLogFactory(settings);

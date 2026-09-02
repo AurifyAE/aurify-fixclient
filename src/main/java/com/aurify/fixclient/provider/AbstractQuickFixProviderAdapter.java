@@ -25,7 +25,7 @@ public abstract class AbstractQuickFixProviderAdapter implements LiquidityProvid
     }
 
     @Override
-    public ValidationResult validateOutbound(CanonicalOutboundRequest request) {
+    public ValidationResult validateOutbound(CanonicalOutboundRequest request, OutboundPolicy policy) {
         return ValidationResult.ok(); // override per provider where LP rules apply
     }
 }

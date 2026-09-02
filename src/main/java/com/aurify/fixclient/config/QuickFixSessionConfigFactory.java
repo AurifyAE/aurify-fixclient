@@ -1,92 +1,95 @@
 package com.aurify.fixclient.config;
 
+import com.aurify.fixclient.provider.ProviderAdapterRegistry;
+import com.aurify.fixclient.session.LpSessionSpec;
 import com.aurify.fixclient.session.SessionRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import quickfix.SessionID;
 import quickfix.SessionSettings;
-
-import java.util.Map;
+import quickfix.mina.ssl.SSLSupport;
 
 /**
- * Turns the "fix-gateway.providers.*" YAML tree into a QuickFIX/J
- * SessionSettings object, and records provider/role/credentials for each
- * generated SessionID into a SessionMetadataRegistry.
+ * Turns a caller-supplied {@link LpSessionSpec} into QuickFIX/J settings.
  *
- * This is the piece that lets you add a brand new provider by editing YAML
- * only - no Java changes needed for a standard session.
+ * The gateway no longer owns any LP configuration: it starts with an empty
+ * SessionSettings and each session's entry is written in just before that
+ * session is created dynamically.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class QuickFixSessionConfigFactory {
 
-    private final ProviderProperties providerProperties;
-    private final SessionMetadataRegistry sessionMetadataRegistry;
+    private final SessionLifecycleProperties lifecycleProperties;
+    private final ProviderAdapterRegistry adapterRegistry;
 
-    public SessionSettings buildSessionSettings() {
+    /** Settings the initiator starts with: shared defaults, zero sessions. */
+    public SessionSettings baseSettings() {
         SessionSettings settings = new SessionSettings();
-
-        // Defaults shared by every session unless overridden
         settings.setString("ConnectionType", "initiator");
-        settings.setString("FileStorePath", "data/store");
-        settings.setString("FileLogPath", "data/log");
+        settings.setString("FileStorePath", lifecycleProperties.getFileStorePath());
+        settings.setString("FileLogPath", lifecycleProperties.getFileLogPath());
         settings.setBool("UseDataDictionary", true);
-
-        for (Map.Entry<String, ProviderProperties.Provider> providerEntry : providerProperties.getProviders().entrySet()) {
-            String providerName = providerEntry.getKey();
-            ProviderProperties.Provider provider = providerEntry.getValue();
-
-            if (provider.getSessions() == null) {
-                log.warn("Provider '{}' has no sessions configured, skipping", providerName);
-                continue;
-            }
-
-            for (Map.Entry<String, ProviderProperties.SessionConfig> sessionEntry : provider.getSessions().entrySet()) {
-                SessionRole role = SessionRole.valueOf(sessionEntry.getKey().toUpperCase());
-                ProviderProperties.SessionConfig cfg = sessionEntry.getValue();
-
-                SessionID sessionId = new SessionID(
-                        provider.getFixVersion(),
-                        cfg.getSenderCompId(),
-                        cfg.getTargetCompId(),
-                        role.name() // SessionQualifier - keeps pricing/trading distinct even
-                                    // if a provider reuses comp IDs across both sessions
-                );
-
-                applySessionSettings(settings, sessionId, cfg);
-
-                sessionMetadataRegistry.put(sessionId, new SessionMetadata(
-                        providerName,
-                        role,
-                        provider.getCredentials() != null ? provider.getCredentials().getUsername() : null,
-                        provider.getCredentials() != null ? provider.getCredentials().getPassword() : null
-                ));
-
-                log.info("Configured {} [{}] session -> {}:{}", providerName, role, cfg.getHost(), cfg.getPort());
-            }
-        }
-
         return settings;
     }
 
-    private void applySessionSettings(SessionSettings settings, SessionID sessionId,
-                                       ProviderProperties.SessionConfig cfg) {
-        settings.setString(sessionId, "SocketConnectHost", cfg.getHost());
-        settings.setLong(sessionId, "SocketConnectPort", cfg.getPort());
-        settings.setLong(sessionId, "HeartBtInt", cfg.getHeartbeatIntervalSeconds());
-        settings.setBool(sessionId, "ResetOnLogon", cfg.isResetSeqNumOnLogon());
-        settings.setBool(sessionId, "PersistMessages", cfg.isPersistMessages());
-        settings.setString(sessionId, "StartTime", "00:00:00");
-        settings.setString(sessionId, "EndTime", "23:59:59");
+    /**
+     * SessionID for an LP account. The qualifier is derived from lpAccountId
+     * and role only - never from the spec fingerprint - because the file store
+     * path is keyed on SessionID, and a changing qualifier would orphan the
+     * sequence numbers on every credential edit.
+     */
+    public SessionID sessionIdFor(LpSessionSpec spec, SessionRole role) {
+        LpSessionSpec.FixSessionSpec session = sessionOf(spec, role);
+        return new SessionID(
+                spec.fixVersion(),
+                session.senderCompId(),
+                session.targetCompId(),
+                spec.lpAccountId() + "-" + role.name());
+    }
 
-        if (cfg.getDataDictionary() != null) {
-            settings.setString(sessionId, "DataDictionary", cfg.getDataDictionary());
-        }
+    /** Writes one session's connection settings into the initiator's settings object. */
+    public void applySpec(SessionSettings settings, SessionID sessionId,
+                          LpSessionSpec spec, SessionRole role) {
+        LpSessionSpec.FixSessionSpec session = sessionOf(spec, role);
 
-        if (cfg.isUseSsl()) {
-            settings.setString(sessionId, "SocketUseSSL", "Y");
+        settings.setString(sessionId, "SocketConnectHost", session.host());
+        settings.setLong(sessionId, "SocketConnectPort", session.port());
+        settings.setLong(sessionId, "HeartBtInt", session.heartbeatIntervalSeconds());
+        settings.setBool(sessionId, "ResetOnLogon", session.resetSeqNumOnLogon());
+        settings.setBool(sessionId, "PersistMessages", true);
+        settings.setString(sessionId, "StartTime", session.startTime());
+        settings.setString(sessionId, "EndTime", session.endTime());
+        settings.setString(sessionId, "DataDictionary", dataDictionaryFor(spec));
+
+        if (session.useSsl()) {
+            settings.setString(sessionId, SSLSupport.SETTING_USE_SSL, "Y");
+            if (session.serverName() != null && !session.serverName().isBlank()) {
+                settings.setString(sessionId, SSLSupport.SETTING_USE_SNI, "Y");
+            }
         }
+    }
+
+    /** The session of a given role, or a clear error if the caller omitted it. */
+    public static LpSessionSpec.FixSessionSpec sessionOf(LpSessionSpec spec, SessionRole role) {
+        if (role == SessionRole.TRADING) {
+            return spec.trading();
+        }
+        throw new IllegalArgumentException(
+                "No " + role + " session configured for LP account " + spec.lpAccountId());
+    }
+
+    /**
+     * The adapter picks the dictionary, because which enums a session must
+     * tolerate is a property of the liquidity provider, not of the FIX version.
+     * Falls back to the stock dictionary ("FIX.4.3" -> "FIX43.xml") when no
+     * adapter is registered for the provider.
+     */
+    String dataDictionaryFor(LpSessionSpec spec) {
+        return adapterRegistry.resolve(spec.provider())
+                .map(adapter -> adapter.dataDictionary(spec.fixVersion()))
+                .orElseGet(() -> spec.fixVersion().replace(".", "") + ".xml");
     }
 }

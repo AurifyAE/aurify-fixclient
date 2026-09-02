@@ -3,6 +3,7 @@ package com.aurify.fixclient.provider.fxcubic;
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOutboundRequest;
+import com.aurify.fixclient.provider.OutboundPolicy;
 import org.springframework.stereotype.Component;
 import quickfix.Message;
 import quickfix.SessionID;
@@ -23,14 +24,15 @@ public class FxCubicOutgoingBuilder {
         this.symbolNormalizer = symbolNormalizer;
     }
 
-    public Message build(CanonicalOutboundRequest request, SessionID sessionId) {
+    public Message build(CanonicalOutboundRequest request, OutboundPolicy policy, SessionID sessionId) {
         if (request instanceof CanonicalOrderRequest order) {
-            return buildNewOrderSingle(order);
+            return buildNewOrderSingle(order, policy);
         }
         throw new IllegalArgumentException("Unsupported outbound request type: " + request.getClass());
     }
 
-    private NewOrderSingle buildNewOrderSingle(CanonicalOrderRequest order) {
+    private NewOrderSingle buildNewOrderSingle(CanonicalOrderRequest order, OutboundPolicy policy) {
+        // FXCubic spec: HandInst is always "1" - set once, in the constructor
         NewOrderSingle nos = new NewOrderSingle(
                 new ClOrdID(order.getClOrdId()),
                 new HandlInst(HandlInst.AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION),
@@ -40,12 +42,10 @@ public class FxCubicOutgoingBuilder {
                 order.getOrdType() == CanonicalOrderRequest.OrdType.LIMIT
                         ? new OrdType(OrdType.LIMIT) : new OrdType(OrdType.MARKET)
         );
-        nos.set(new Symbol(symbolNormalizer.normalize(order.getSymbol())));
+        nos.set(new Symbol(symbolNormalizer.normalize(order.getSymbol(), policy)));
         nos.set(new OrderQty(order.getOrderQty().doubleValue()));
         // FXCubic spec: TimeInForce is always Immediate-Or-Cancel
         nos.set(new TimeInForce(TimeInForce.IMMEDIATE_OR_CANCEL));
-        // FXCubic spec: HandInst is always "1"
-        nos.set(new HandlInst((HandlInst.AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION)));
         if (order.getOrdType() == CanonicalOrderRequest.OrdType.LIMIT) {
             nos.set(new Price(order.getPrice().doubleValue()));
         }

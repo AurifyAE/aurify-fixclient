@@ -1,55 +1,88 @@
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/FixGatewayApplication.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/admin/AdminProviderController.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/admin/AdminSequenceController.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/admin/AdminSessionController.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/admin/dto/SequenceResetRequest.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/admin/dto/SessionStatusResponse.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/enums/CanonicalExecType.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/enums/CanonicalOrdStatus.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/enums/CanonicalSide.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/event/CanonicalEvent.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/event/CanonicalExecutionReport.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/event/CanonicalOrderRequest.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/event/CanonicalOutboundRequest.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/canonical/event/CanonicalReject.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/config/ProviderProperties.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/config/QuickFixInitiatorConfig.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/config/QuickFixSessionConfigFactory.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/config/SessionMetadata.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/config/SessionMetadataRegistry.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/dispatch/OutboundFixDispatchService.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/events/GatewayEventPublisher.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/events/PipelineStateChangedEvent.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/events/ProviderHealthChangedEvent.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/events/SessionConnectedEvent.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/events/SessionDisconnectedEvent.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/health/ProviderHealthIndicator.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/health/QueueDepthMetrics.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/health/SessionMetricsCollector.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/persistence/InMemoryPersistenceAdapter.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/persistence/PersistenceGateway.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/persistence/entity/CanonicalEventEntity.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/persistence/entity/RawFixMessageEntity.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/pipeline/InboundMessageQueue.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/pipeline/InboundProcessingPipeline.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/pipeline/OutboundDispatchPipeline.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/pipeline/OutboundRequestQueue.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/AbstractQuickFixProviderAdapter.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/LiquidityProviderAdapter.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/ProviderAdapterRegistry.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/ProviderCapabilities.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/ValidationResult.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/fxcubic/FxCubicIncomingMapper.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/fxcubic/FxCubicOutgoingBuilder.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/fxcubic/FxCubicProviderAdapter.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/fxcubic/FxCubicStartupWorkflow.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/provider/fxcubic/FxCubicSymbolNormalizer.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/DirectSessionControlService.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/DirectSessionControlServiceImpl.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/InMemoryProviderSessionRegistry.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/ProviderSessionRegistry.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/SessionRole.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/session/SessionStatusSnapshot.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/transport/FixMessageDirection.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/transport/GatewayFixApplication.java
-/Users/sohail/Downloads/fix-gateway-scaffold (1)/src/main/java/com/yourorg/fixgateway/transport/GatewayMessageCracker.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\AdminProviderController.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\AdminSequenceController.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\AdminSessionController.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\dto\EnsureSessionRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\dto\SequenceResetRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\dto\SessionStatusResponse.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\admin\OrderTestController.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\enums\CanonicalExecType.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\enums\CanonicalOrdStatus.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\enums\CanonicalSide.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\event\CanonicalEvent.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\event\CanonicalExecutionReport.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\event\CanonicalOrderRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\event\CanonicalOutboundRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\canonical\event\CanonicalReject.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\ProviderProperties.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\QuickFixInitiatorConfig.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\QuickFixSessionConfigFactory.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\SessionLifecycleProperties.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\SessionMetadata.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\config\SessionMetadataRegistry.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\dispatch\OutboundDispatchEnvelope.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\dispatch\OutboundFixDispatchService.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\GatewayEventPublisher.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\PipelineStateChangedEvent.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\ProviderHealthChangedEvent.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\SessionConnectedEvent.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\SessionDisconnectedEvent.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\FixGatewayApplication.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\GrpcGatewayProperties.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\GrpcServerLifecycle.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\LpHedgeGatewayService.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\LpSessionSpecMapper.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\PendingOrderRegistry.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\health\ProviderHealthIndicator.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\health\QueueDepthMetrics.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\health\SessionMetricsCollector.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\persistence\entity\CanonicalEventEntity.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\persistence\entity\RawFixMessageEntity.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\persistence\InMemoryPersistenceAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\persistence\PersistenceGateway.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\InboundMessageQueue.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\InboundProcessingPipeline.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\OutboundDispatchPipeline.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\OutboundRequestQueue.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\AbstractQuickFixProviderAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicIncomingMapper.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicOutgoingBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicProviderAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicStartupWorkflow.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicSymbolNormalizer.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\LiquidityProviderAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\OutboundPolicy.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\ProviderAdapterRegistry.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\ProviderCapabilities.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\ValidationResult.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\DirectSessionControlService.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\DirectSessionControlServiceImpl.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\DynamicSessionManager.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\IdleSessionReaper.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\LpSessionEntry.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\LpSessionException.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\LpSessionRegistry.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\LpSessionSpec.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\SessionRole.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\SessionState.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\session\SessionStatusSnapshot.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\transport\FixMessageDirection.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\transport\GatewayFixApplication.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\transport\GatewayMessageCracker.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\grpc-java\aurify\lphedge\v1\LpHedgeGatewayGrpc.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\CloseSessionRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\CloseSessionRequestOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\EnsureSessionRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\EnsureSessionRequestOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\FixSession.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\FixSessionOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\LpHedgeGatewayProto.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\LpSessionSpec.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\LpSessionSpecOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SessionStatusRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SessionStatusRequestOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SessionStatusResponse.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SessionStatusResponseOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SubmitMarketOrderRequest.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SubmitMarketOrderRequestOrBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SubmitMarketOrderResponse.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\target\generated-sources\protobuf\java\aurify\lphedge\v1\SubmitMarketOrderResponseOrBuilder.java

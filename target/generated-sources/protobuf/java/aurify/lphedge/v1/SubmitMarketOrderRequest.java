@@ -20,7 +20,6 @@ private static final long serialVersionUID = 0L;
     idempotencyKey_ = "";
     orderId_ = "";
     lpAccountId_ = "";
-    lpApiKey_ = "";
     symbol_ = "";
     side_ = "";
     orderType_ = "";
@@ -49,6 +48,7 @@ private static final long serialVersionUID = 0L;
             aurify.lphedge.v1.SubmitMarketOrderRequest.class, aurify.lphedge.v1.SubmitMarketOrderRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object idempotencyKey_ = "";
@@ -160,45 +160,6 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       lpAccountId_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int LP_API_KEY_FIELD_NUMBER = 4;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object lpApiKey_ = "";
-  /**
-   * <code>string lp_api_key = 4;</code>
-   * @return The lpApiKey.
-   */
-  @java.lang.Override
-  public java.lang.String getLpApiKey() {
-    java.lang.Object ref = lpApiKey_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      lpApiKey_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string lp_api_key = 4;</code>
-   * @return The bytes for lpApiKey.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getLpApiKeyBytes() {
-    java.lang.Object ref = lpApiKey_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      lpApiKey_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -450,6 +411,44 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SESSION_FIELD_NUMBER = 12;
+  private aurify.lphedge.v1.LpSessionSpec session_;
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   * @return Whether the session field is set.
+   */
+  @java.lang.Override
+  public boolean hasSession() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   * @return The session.
+   */
+  @java.lang.Override
+  public aurify.lphedge.v1.LpSessionSpec getSession() {
+    return session_ == null ? aurify.lphedge.v1.LpSessionSpec.getDefaultInstance() : session_;
+  }
+  /**
+   * <pre>
+   * required
+   * </pre>
+   *
+   * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+   */
+  @java.lang.Override
+  public aurify.lphedge.v1.LpSessionSpecOrBuilder getSessionOrBuilder() {
+    return session_ == null ? aurify.lphedge.v1.LpSessionSpec.getDefaultInstance() : session_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -473,9 +472,6 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(lpAccountId_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 3, lpAccountId_);
     }
-    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(lpApiKey_)) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 4, lpApiKey_);
-    }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(symbol_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 5, symbol_);
     }
@@ -497,6 +493,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(correlationId_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 11, correlationId_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(12, getSession());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -514,9 +513,6 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(lpAccountId_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, lpAccountId_);
-    }
-    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(lpApiKey_)) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, lpApiKey_);
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(symbol_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, symbol_);
@@ -540,6 +536,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(correlationId_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(11, correlationId_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(12, getSession());
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -561,8 +561,6 @@ private static final long serialVersionUID = 0L;
         .equals(other.getOrderId())) return false;
     if (!getLpAccountId()
         .equals(other.getLpAccountId())) return false;
-    if (!getLpApiKey()
-        .equals(other.getLpApiKey())) return false;
     if (!getSymbol()
         .equals(other.getSymbol())) return false;
     if (!getSide()
@@ -577,6 +575,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBranchId())) return false;
     if (!getCorrelationId()
         .equals(other.getCorrelationId())) return false;
+    if (hasSession() != other.hasSession()) return false;
+    if (hasSession()) {
+      if (!getSession()
+          .equals(other.getSession())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -594,8 +597,6 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getOrderId().hashCode();
     hash = (37 * hash) + LP_ACCOUNT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getLpAccountId().hashCode();
-    hash = (37 * hash) + LP_API_KEY_FIELD_NUMBER;
-    hash = (53 * hash) + getLpApiKey().hashCode();
     hash = (37 * hash) + SYMBOL_FIELD_NUMBER;
     hash = (53 * hash) + getSymbol().hashCode();
     hash = (37 * hash) + SIDE_FIELD_NUMBER;
@@ -611,6 +612,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getBranchId().hashCode();
     hash = (37 * hash) + CORRELATION_ID_FIELD_NUMBER;
     hash = (53 * hash) + getCorrelationId().hashCode();
+    if (hasSession()) {
+      hash = (37 * hash) + SESSION_FIELD_NUMBER;
+      hash = (53 * hash) + getSession().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -730,13 +735,19 @@ private static final long serialVersionUID = 0L;
 
     // Construct using aurify.lphedge.v1.SubmitMarketOrderRequest.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessageV3
+              .alwaysUseFieldBuilders) {
+        getSessionFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -745,7 +756,6 @@ private static final long serialVersionUID = 0L;
       idempotencyKey_ = "";
       orderId_ = "";
       lpAccountId_ = "";
-      lpApiKey_ = "";
       symbol_ = "";
       side_ = "";
       quantity_ = 0L;
@@ -753,6 +763,11 @@ private static final long serialVersionUID = 0L;
       organizationId_ = "";
       branchId_ = "";
       correlationId_ = "";
+      session_ = null;
+      if (sessionBuilder_ != null) {
+        sessionBuilder_.dispose();
+        sessionBuilder_ = null;
+      }
       return this;
     }
 
@@ -796,29 +811,34 @@ private static final long serialVersionUID = 0L;
         result.lpAccountId_ = lpAccountId_;
       }
       if (((from_bitField0_ & 0x00000008) != 0)) {
-        result.lpApiKey_ = lpApiKey_;
-      }
-      if (((from_bitField0_ & 0x00000010) != 0)) {
         result.symbol_ = symbol_;
       }
-      if (((from_bitField0_ & 0x00000020) != 0)) {
+      if (((from_bitField0_ & 0x00000010) != 0)) {
         result.side_ = side_;
       }
-      if (((from_bitField0_ & 0x00000040) != 0)) {
+      if (((from_bitField0_ & 0x00000020) != 0)) {
         result.quantity_ = quantity_;
       }
-      if (((from_bitField0_ & 0x00000080) != 0)) {
+      if (((from_bitField0_ & 0x00000040) != 0)) {
         result.orderType_ = orderType_;
       }
-      if (((from_bitField0_ & 0x00000100) != 0)) {
+      if (((from_bitField0_ & 0x00000080) != 0)) {
         result.organizationId_ = organizationId_;
       }
-      if (((from_bitField0_ & 0x00000200) != 0)) {
+      if (((from_bitField0_ & 0x00000100) != 0)) {
         result.branchId_ = branchId_;
       }
-      if (((from_bitField0_ & 0x00000400) != 0)) {
+      if (((from_bitField0_ & 0x00000200) != 0)) {
         result.correlationId_ = correlationId_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.session_ = sessionBuilder_ == null
+            ? session_
+            : sessionBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -880,19 +900,14 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000004;
         onChanged();
       }
-      if (!other.getLpApiKey().isEmpty()) {
-        lpApiKey_ = other.lpApiKey_;
-        bitField0_ |= 0x00000008;
-        onChanged();
-      }
       if (!other.getSymbol().isEmpty()) {
         symbol_ = other.symbol_;
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       if (!other.getSide().isEmpty()) {
         side_ = other.side_;
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
       }
       if (other.getQuantity() != 0L) {
@@ -900,23 +915,26 @@ private static final long serialVersionUID = 0L;
       }
       if (!other.getOrderType().isEmpty()) {
         orderType_ = other.orderType_;
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000040;
         onChanged();
       }
       if (!other.getOrganizationId().isEmpty()) {
         organizationId_ = other.organizationId_;
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000080;
         onChanged();
       }
       if (!other.getBranchId().isEmpty()) {
         branchId_ = other.branchId_;
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000100;
         onChanged();
       }
       if (!other.getCorrelationId().isEmpty()) {
         correlationId_ = other.correlationId_;
-        bitField0_ |= 0x00000400;
+        bitField0_ |= 0x00000200;
         onChanged();
+      }
+      if (other.hasSession()) {
+        mergeSession(other.getSession());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -959,46 +977,48 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
-            case 34: {
-              lpApiKey_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000008;
-              break;
-            } // case 34
             case 42: {
               symbol_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000010;
+              bitField0_ |= 0x00000008;
               break;
             } // case 42
             case 50: {
               side_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000020;
+              bitField0_ |= 0x00000010;
               break;
             } // case 50
             case 56: {
               quantity_ = input.readInt64();
-              bitField0_ |= 0x00000040;
+              bitField0_ |= 0x00000020;
               break;
             } // case 56
             case 66: {
               orderType_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000080;
+              bitField0_ |= 0x00000040;
               break;
             } // case 66
             case 74: {
               organizationId_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000100;
+              bitField0_ |= 0x00000080;
               break;
             } // case 74
             case 82: {
               branchId_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000200;
+              bitField0_ |= 0x00000100;
               break;
             } // case 82
             case 90: {
               correlationId_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000400;
+              bitField0_ |= 0x00000200;
               break;
             } // case 90
+            case 98: {
+              input.readMessage(
+                  getSessionFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1232,78 +1252,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object lpApiKey_ = "";
-    /**
-     * <code>string lp_api_key = 4;</code>
-     * @return The lpApiKey.
-     */
-    public java.lang.String getLpApiKey() {
-      java.lang.Object ref = lpApiKey_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        lpApiKey_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string lp_api_key = 4;</code>
-     * @return The bytes for lpApiKey.
-     */
-    public com.google.protobuf.ByteString
-        getLpApiKeyBytes() {
-      java.lang.Object ref = lpApiKey_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        lpApiKey_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string lp_api_key = 4;</code>
-     * @param value The lpApiKey to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLpApiKey(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      lpApiKey_ = value;
-      bitField0_ |= 0x00000008;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string lp_api_key = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLpApiKey() {
-      lpApiKey_ = getDefaultInstance().getLpApiKey();
-      bitField0_ = (bitField0_ & ~0x00000008);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string lp_api_key = 4;</code>
-     * @param value The bytes for lpApiKey to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLpApiKeyBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      lpApiKey_ = value;
-      bitField0_ |= 0x00000008;
-      onChanged();
-      return this;
-    }
-
     private java.lang.Object symbol_ = "";
     /**
      * <code>string symbol = 5;</code>
@@ -1347,7 +1295,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       symbol_ = value;
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -1357,7 +1305,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearSymbol() {
       symbol_ = getDefaultInstance().getSymbol();
-      bitField0_ = (bitField0_ & ~0x00000010);
+      bitField0_ = (bitField0_ & ~0x00000008);
       onChanged();
       return this;
     }
@@ -1371,7 +1319,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       symbol_ = value;
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -1419,7 +1367,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       side_ = value;
-      bitField0_ |= 0x00000020;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -1429,7 +1377,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearSide() {
       side_ = getDefaultInstance().getSide();
-      bitField0_ = (bitField0_ & ~0x00000020);
+      bitField0_ = (bitField0_ & ~0x00000010);
       onChanged();
       return this;
     }
@@ -1443,7 +1391,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       side_ = value;
-      bitField0_ |= 0x00000020;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -1465,7 +1413,7 @@ private static final long serialVersionUID = 0L;
     public Builder setQuantity(long value) {
 
       quantity_ = value;
-      bitField0_ |= 0x00000040;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
@@ -1474,7 +1422,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearQuantity() {
-      bitField0_ = (bitField0_ & ~0x00000040);
+      bitField0_ = (bitField0_ & ~0x00000020);
       quantity_ = 0L;
       onChanged();
       return this;
@@ -1523,7 +1471,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       orderType_ = value;
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -1533,7 +1481,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearOrderType() {
       orderType_ = getDefaultInstance().getOrderType();
-      bitField0_ = (bitField0_ & ~0x00000080);
+      bitField0_ = (bitField0_ & ~0x00000040);
       onChanged();
       return this;
     }
@@ -1547,7 +1495,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       orderType_ = value;
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -1595,7 +1543,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       organizationId_ = value;
-      bitField0_ |= 0x00000100;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }
@@ -1605,7 +1553,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearOrganizationId() {
       organizationId_ = getDefaultInstance().getOrganizationId();
-      bitField0_ = (bitField0_ & ~0x00000100);
+      bitField0_ = (bitField0_ & ~0x00000080);
       onChanged();
       return this;
     }
@@ -1619,7 +1567,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       organizationId_ = value;
-      bitField0_ |= 0x00000100;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }
@@ -1667,7 +1615,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       branchId_ = value;
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1677,7 +1625,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearBranchId() {
       branchId_ = getDefaultInstance().getBranchId();
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00000100);
       onChanged();
       return this;
     }
@@ -1691,7 +1639,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       branchId_ = value;
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1739,7 +1687,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       correlationId_ = value;
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000200;
       onChanged();
       return this;
     }
@@ -1749,7 +1697,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearCorrelationId() {
       correlationId_ = getDefaultInstance().getCorrelationId();
-      bitField0_ = (bitField0_ & ~0x00000400);
+      bitField0_ = (bitField0_ & ~0x00000200);
       onChanged();
       return this;
     }
@@ -1763,9 +1711,166 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       correlationId_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private aurify.lphedge.v1.LpSessionSpec session_;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        aurify.lphedge.v1.LpSessionSpec, aurify.lphedge.v1.LpSessionSpec.Builder, aurify.lphedge.v1.LpSessionSpecOrBuilder> sessionBuilder_;
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     * @return Whether the session field is set.
+     */
+    public boolean hasSession() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     * @return The session.
+     */
+    public aurify.lphedge.v1.LpSessionSpec getSession() {
+      if (sessionBuilder_ == null) {
+        return session_ == null ? aurify.lphedge.v1.LpSessionSpec.getDefaultInstance() : session_;
+      } else {
+        return sessionBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public Builder setSession(aurify.lphedge.v1.LpSessionSpec value) {
+      if (sessionBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        session_ = value;
+      } else {
+        sessionBuilder_.setMessage(value);
+      }
       bitField0_ |= 0x00000400;
       onChanged();
       return this;
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public Builder setSession(
+        aurify.lphedge.v1.LpSessionSpec.Builder builderForValue) {
+      if (sessionBuilder_ == null) {
+        session_ = builderForValue.build();
+      } else {
+        sessionBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public Builder mergeSession(aurify.lphedge.v1.LpSessionSpec value) {
+      if (sessionBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0) &&
+          session_ != null &&
+          session_ != aurify.lphedge.v1.LpSessionSpec.getDefaultInstance()) {
+          getSessionBuilder().mergeFrom(value);
+        } else {
+          session_ = value;
+        }
+      } else {
+        sessionBuilder_.mergeFrom(value);
+      }
+      if (session_ != null) {
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public Builder clearSession() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      session_ = null;
+      if (sessionBuilder_ != null) {
+        sessionBuilder_.dispose();
+        sessionBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public aurify.lphedge.v1.LpSessionSpec.Builder getSessionBuilder() {
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return getSessionFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    public aurify.lphedge.v1.LpSessionSpecOrBuilder getSessionOrBuilder() {
+      if (sessionBuilder_ != null) {
+        return sessionBuilder_.getMessageOrBuilder();
+      } else {
+        return session_ == null ?
+            aurify.lphedge.v1.LpSessionSpec.getDefaultInstance() : session_;
+      }
+    }
+    /**
+     * <pre>
+     * required
+     * </pre>
+     *
+     * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        aurify.lphedge.v1.LpSessionSpec, aurify.lphedge.v1.LpSessionSpec.Builder, aurify.lphedge.v1.LpSessionSpecOrBuilder> 
+        getSessionFieldBuilder() {
+      if (sessionBuilder_ == null) {
+        sessionBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            aurify.lphedge.v1.LpSessionSpec, aurify.lphedge.v1.LpSessionSpec.Builder, aurify.lphedge.v1.LpSessionSpecOrBuilder>(
+                getSession(),
+                getParentForChildren(),
+                isClean());
+        session_ = null;
+      }
+      return sessionBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

@@ -43,8 +43,11 @@ public class GatewayMessageCracker extends MessageCracker {
         enqueue(sessionId, adapter -> adapter.mapIncoming(report, sessionId));
     }
 
-    public void onMessage(MarketDataSnapshotFullRefresh snapshot, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(snapshot, sessionId));
+    /** Market data is out of scope for this trading-only gateway. Dropped with a
+     *  log line rather than routed, so it never reaches a mapper that would
+     *  throw on it. */
+    public void onMessage(MarketDataSnapshotFullRefresh snapshot, SessionID sessionId) {
+        log.debug("Ignoring market data snapshot on {} - gateway is trading-only", sessionId);
     }
 
     public void onMessage(MarketDataRequestReject reject, SessionID sessionId) throws FieldNotFound {

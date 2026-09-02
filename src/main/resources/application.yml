@@ -14,44 +14,30 @@ management:
       exposure:
         include: health,metrics,prometheus
 
+# NOTE: there is deliberately no "providers" tree here any more. LP hosts,
+# comp IDs and credentials belong to the caller and arrive on each gRPC request
+# as an LpSessionSpec. Everything below is gateway-wide behaviour only.
 fix-gateway:
   grpc:
     port: 9090
-    provider: fxcubic
     order-timeout-ms: 10000
-  providers:
-    fxcubic:
-      display-name: "FXCubic"
-      fix-version: "FIX.4.3"
-      sessions:
-        pricing:
-          sender-comp-id: "YOURFIRM_PX"
-          target-comp-id: "FXCUBIC_PX"
-          host: "px.fxcubic.example.com"
-          port: 9001
-          reset-seq-num-on-logon: true
-          persist-messages: false
-          heartbeat-interval-seconds: 30
-          use-ssl: true
-        trading:
-          sender-comp-id: "YOURFIRM_TR"
-          target-comp-id: "FXCUBIC_TR"
-          host: "tr.fxcubic.example.com"
-          port: 9002
-          reset-seq-num-on-logon: false
-          persist-messages: false
-          heartbeat-interval-seconds: 30
-          use-ssl: true
-      startup:
-        subscribe-market-data: true
-        symbols: ["EURUSD", "GBPUSD", "USDJPY"]
-        market-depth: "TOP_OF_BOOK"
-      capabilities:
-        supported-ord-types: ["MARKET", "LIMIT"]
-        supported-tif: ["IOC"]
-      credentials:
-        username: "${FXCUBIC_USERNAME}"
-        password: "${FXCUBIC_PASSWORD}"
+    # This port carries LP FIX passwords. Enable mTLS in every environment that
+    # reaches a real LP; plaintext is for loopback development only.
+    tls:
+      enabled: ${LP_HEDGE_GRPC_TLS_ENABLED:false}
+      cert-chain-path: ${LP_HEDGE_GRPC_TLS_CERT:}
+      private-key-path: ${LP_HEDGE_GRPC_TLS_KEY:}
+      trust-cert-collection-path: ${LP_HEDGE_GRPC_TLS_CA:}
+      require-client-auth: true
+
+  session:
+    # Kept under the caller's RPC deadline so a slow logon surfaces as an error
+    # rather than as a timeout with no explanation.
+    logon-timeout-seconds: 8
+    idle-timeout-minutes: 30
+    reaper-interval-ms: 60000
+    file-store-path: data/store
+    file-log-path: data/log
 
   pipeline:
     inbound-queue-capacity: 10000
