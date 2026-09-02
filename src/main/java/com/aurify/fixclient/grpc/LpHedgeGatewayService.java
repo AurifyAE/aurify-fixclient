@@ -2,9 +2,13 @@ package com.aurify.fixclient.grpc;
 
 import aurify.lphedge.v1.CloseSessionRequest;
 import aurify.lphedge.v1.EnsureSessionRequest;
+import aurify.lphedge.v1.ExecutionReport;
+import aurify.lphedge.v1.GetOrderExecutionsRequest;
+import aurify.lphedge.v1.GetOrderExecutionsResponse;
 import aurify.lphedge.v1.LpHedgeGatewayGrpc;
 import aurify.lphedge.v1.SessionStatusRequest;
 import aurify.lphedge.v1.SessionStatusResponse;
+import aurify.lphedge.v1.StreamExecutionReportsRequest;
 import aurify.lphedge.v1.SubmitMarketOrderRequest;
 import aurify.lphedge.v1.SubmitMarketOrderResponse;
 import com.aurify.fixclient.canonical.enums.CanonicalOrdStatus;
@@ -12,6 +16,7 @@ import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalExecutionReport;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.dispatch.OutboundFixDispatchService;
+import com.aurify.fixclient.journal.ExecutionJournal;
 import com.aurify.fixclient.session.DynamicSessionManager;
 import com.aurify.fixclient.session.LpSessionEntry;
 import com.aurify.fixclient.session.LpSessionException;
@@ -20,12 +25,15 @@ import com.aurify.fixclient.session.SessionRole;
 import com.aurify.fixclient.session.SessionState;
 import io.grpc.Context;
 import io.grpc.Status;
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import reactor.core.Disposable;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +57,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     private final PendingOrderRegistry pendingOrders;
     private final GrpcGatewayProperties properties;
     private final DynamicSessionManager sessionManager;
+    private final ExecutionJournal executionJournal;
 
     @Override
     public void submitMarketOrder(SubmitMarketOrderRequest request,
@@ -85,11 +94,11 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             registration.getFuture().orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .whenComplete((report, error) -> {
                         if (error != null) {
-                            observer.onNext(toFailureResponse(
-                                    error, clOrdId, timeoutMs, registration.getLastAck()));
+                            observer.onNext(withReports(toFailureResponse(
+                                    error, clOrdId, timeoutMs, registration.getLastAck()), clOrdId));
                             observer.onCompleted();
                         } else {
-                            observer.onNext(toResponse(report));
+                            observer.onNext(withReports(toResponse(report), clOrdId));
                             observer.onCompleted();
                         }
                     });
@@ -131,6 +140,62 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                         .setLpAccountId(request.getLpAccountId())
                         .setState(SessionState.ABSENT.name())
                         .build());
+        observer.onCompleted();
+    }
+
+    /**
+     * Feeds the caller's execution ledger.
+     *
+     * A subscriber that reconnects passes the instant it last recorded, and the
+     * journal replays what it holds from there before going live, so a dropped
+     * connection costs nothing as long as it is re-established inside the
+     * journal's retention window.
+     */
+    @Override
+    public void streamExecutionReports(StreamExecutionReportsRequest request,
+                                       StreamObserver<ExecutionReport> observer) {
+        Instant since = request.getSinceEpochMs() > 0
+                ? Instant.ofEpochMilli(request.getSinceEpochMs())
+                : null;
+
+        ServerCallStreamObserver<ExecutionReport> serverObserver =
+                (ServerCallStreamObserver<ExecutionReport>) observer;
+
+        Disposable subscription = executionJournal.stream(since)
+                .subscribe(
+                        journaled -> {
+                            // The client can go away between an emission and its
+                            // delivery; writing to a cancelled call throws.
+                            if (!serverObserver.isCancelled()) {
+                                serverObserver.onNext(ExecutionReportMapper.toProto(journaled));
+                            }
+                        },
+                        error -> {
+                            log.error("Execution report stream failed", error);
+                            serverObserver.onError(Status.INTERNAL
+                                    .withDescription("Execution report stream failed")
+                                    .withCause(error).asRuntimeException());
+                        });
+
+        // Without this the Reactor subscription outlives the call and the journal
+        // keeps a subscriber for every client that ever connected.
+        serverObserver.setOnCancelHandler(subscription::dispose);
+    }
+
+    @Override
+    public void getOrderExecutions(GetOrderExecutionsRequest request,
+                                   StreamObserver<GetOrderExecutionsResponse> observer) {
+        String clOrdId = blankToNull(request.getClOrdId());
+        if (clOrdId == null) {
+            observer.onError(Status.INVALID_ARGUMENT
+                    .withDescription("cl_ord_id is required").asRuntimeException());
+            return;
+        }
+
+        GetOrderExecutionsResponse.Builder response = GetOrderExecutionsResponse.newBuilder().setSuccess(true);
+        executionJournal.reportsFor(clOrdId)
+                .forEach(journaled -> response.addReports(ExecutionReportMapper.toProto(journaled)));
+        observer.onNext(response.build());
         observer.onCompleted();
     }
 
@@ -279,6 +344,22 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                 .setErrorCode("FIX_EXECUTION_REPORT_TIMEOUT")
                 .setErrorMessage("No FIX execution report received within " + timeoutMs + " ms")
                 .build();
+    }
+
+    /**
+     * Attaches the order's full execution history to the summary fields.
+     *
+     * The caller keeps a ledger of every report, not just the outcome, and the
+     * journal already holds them - including the intermediate acknowledgements
+     * and any partial fills that led to this answer. Safe to read here because
+     * the pipeline journals a report before publishing the event that settles
+     * the call, so the report being answered is always present.
+     */
+    private SubmitMarketOrderResponse withReports(SubmitMarketOrderResponse response, String clOrdId) {
+        SubmitMarketOrderResponse.Builder builder = response.toBuilder();
+        executionJournal.reportsFor(clOrdId)
+                .forEach(journaled -> builder.addReports(ExecutionReportMapper.toProto(journaled)));
+        return builder.build();
     }
 
     private SubmitMarketOrderResponse failure(String code, String message) { return SubmitMarketOrderResponse.newBuilder().setSuccess(false).setErrorCode(code).setErrorMessage(nullToEmpty(message)).build(); }

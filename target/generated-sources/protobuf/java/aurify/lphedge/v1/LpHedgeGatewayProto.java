@@ -36,6 +36,26 @@ public final class LpHedgeGatewayProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_aurify_lphedge_v1_SubmitMarketOrderResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_aurify_lphedge_v1_ExecutionReport_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_aurify_lphedge_v1_ExecutionReport_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_aurify_lphedge_v1_StreamExecutionReportsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_aurify_lphedge_v1_StreamExecutionReportsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_aurify_lphedge_v1_GetOrderExecutionsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_aurify_lphedge_v1_GetOrderExecutionsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_aurify_lphedge_v1_EnsureSessionRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -86,34 +106,59 @@ public final class LpHedgeGatewayProto {
       "\n\017organization_id\030\t \001(\t\022\021\n\tbranch_id\030\n \001" +
       "(\t\022\026\n\016correlation_id\030\013 \001(\t\0221\n\007session\030\014 " +
       "\001(\0132 .aurify.lphedge.v1.LpSessionSpecJ\004\010" +
-      "\004\020\005R\nlp_api_key\"\323\001\n\031SubmitMarketOrderRes" +
+      "\004\020\005R\nlp_api_key\"\210\002\n\031SubmitMarketOrderRes" +
       "ponse\022\017\n\007success\030\001 \001(\010\022\021\n\tcl_ord_id\030\002 \001(" +
       "\t\022\020\n\010order_id\030\003 \001(\t\022\016\n\006status\030\004 \001(\t\022\016\n\006a" +
       "vg_px\030\005 \001(\001\022\017\n\007cum_qty\030\006 \001(\001\022\022\n\nleaves_q" +
       "ty\030\007 \001(\001\022\020\n\010terminal\030\010 \001(\010\022\022\n\nerror_code" +
-      "\030\t \001(\t\022\025\n\rerror_message\030\n \001(\t\"I\n\024EnsureS" +
-      "essionRequest\0221\n\007session\030\001 \001(\0132 .aurify." +
-      "lphedge.v1.LpSessionSpec\"-\n\024SessionStatu" +
-      "sRequest\022\025\n\rlp_account_id\030\001 \001(\t\",\n\023Close" +
-      "SessionRequest\022\025\n\rlp_account_id\030\001 \001(\t\"\345\001" +
-      "\n\025SessionStatusResponse\022\017\n\007success\030\001 \001(\010" +
-      "\022\025\n\rlp_account_id\030\002 \001(\t\022\r\n\005state\030\003 \001(\t\022\022" +
-      "\n\nsession_id\030\004 \001(\t\022\030\n\020spec_fingerprint\030\005" +
-      " \001(\t\022\035\n\025logged_on_at_epoch_ms\030\006 \001(\003\022\035\n\025l" +
-      "ast_used_at_epoch_ms\030\007 \001(\003\022\022\n\nerror_code" +
-      "\030\010 \001(\t\022\025\n\rerror_message\030\t \001(\t2\255\003\n\016LpHedg" +
-      "eGateway\022n\n\021SubmitMarketOrder\022+.aurify.l" +
-      "phedge.v1.SubmitMarketOrderRequest\032,.aur" +
-      "ify.lphedge.v1.SubmitMarketOrderResponse" +
-      "\022b\n\rEnsureSession\022\'.aurify.lphedge.v1.En" +
-      "sureSessionRequest\032(.aurify.lphedge.v1.S" +
-      "essionStatusResponse\022e\n\020GetSessionStatus" +
-      "\022\'.aurify.lphedge.v1.SessionStatusReques" +
-      "t\032(.aurify.lphedge.v1.SessionStatusRespo" +
-      "nse\022`\n\014CloseSession\022&.aurify.lphedge.v1." +
-      "CloseSessionRequest\032(.aurify.lphedge.v1." +
-      "SessionStatusResponseB*\n\021aurify.lphedge." +
-      "v1B\023LpHedgeGatewayProtoP\001b\006proto3"
+      "\030\t \001(\t\022\025\n\rerror_message\030\n \001(\t\0223\n\007reports" +
+      "\030\013 \003(\0132\".aurify.lphedge.v1.ExecutionRepo" +
+      "rt\"\272\003\n\017ExecutionReport\022\025\n\rlp_account_id\030" +
+      "\001 \001(\t\022\020\n\010provider\030\002 \001(\t\022\021\n\tcl_ord_id\030\003 \001" +
+      "(\t\022\020\n\010order_id\030\004 \001(\t\022\017\n\007exec_id\030\005 \001(\t\022\021\n" +
+      "\texec_type\030\006 \001(\t\022\022\n\nord_status\030\007 \001(\t\022\016\n\006" +
+      "symbol\030\010 \001(\t\022\014\n\004side\030\t \001(\t\022\021\n\torder_qty\030" +
+      "\n \001(\001\022\r\n\005price\030\013 \001(\001\022\020\n\010last_qty\030\014 \001(\001\022\017" +
+      "\n\007last_px\030\r \001(\001\022\022\n\nleaves_qty\030\016 \001(\001\022\017\n\007c" +
+      "um_qty\030\017 \001(\001\022\016\n\006avg_px\030\020 \001(\001\022\023\n\013reject_t" +
+      "ext\030\021 \001(\t\022\026\n\016ord_rej_reason\030\022 \001(\005\022\033\n\023sec" +
+      "ondary_cl_ord_id\030\023 \001(\t\022\034\n\024occurred_at_ep" +
+      "och_ms\030\024 \001(\003\022\020\n\010terminal\030\025 \001(\010\022\017\n\007raw_fi" +
+      "x\030\026 \001(\t\"7\n\035StreamExecutionReportsRequest" +
+      "\022\026\n\016since_epoch_ms\030\001 \001(\003\".\n\031GetOrderExec" +
+      "utionsRequest\022\021\n\tcl_ord_id\030\001 \001(\t\"\215\001\n\032Get" +
+      "OrderExecutionsResponse\022\017\n\007success\030\001 \001(\010" +
+      "\0223\n\007reports\030\002 \003(\0132\".aurify.lphedge.v1.Ex" +
+      "ecutionReport\022\022\n\nerror_code\030\003 \001(\t\022\025\n\rerr" +
+      "or_message\030\004 \001(\t\"I\n\024EnsureSessionRequest" +
+      "\0221\n\007session\030\001 \001(\0132 .aurify.lphedge.v1.Lp" +
+      "SessionSpec\"-\n\024SessionStatusRequest\022\025\n\rl" +
+      "p_account_id\030\001 \001(\t\",\n\023CloseSessionReques" +
+      "t\022\025\n\rlp_account_id\030\001 \001(\t\"\345\001\n\025SessionStat" +
+      "usResponse\022\017\n\007success\030\001 \001(\010\022\025\n\rlp_accoun" +
+      "t_id\030\002 \001(\t\022\r\n\005state\030\003 \001(\t\022\022\n\nsession_id\030" +
+      "\004 \001(\t\022\030\n\020spec_fingerprint\030\005 \001(\t\022\035\n\025logge" +
+      "d_on_at_epoch_ms\030\006 \001(\003\022\035\n\025last_used_at_e" +
+      "poch_ms\030\007 \001(\003\022\022\n\nerror_code\030\010 \001(\t\022\025\n\rerr" +
+      "or_message\030\t \001(\t2\222\005\n\016LpHedgeGateway\022n\n\021S" +
+      "ubmitMarketOrder\022+.aurify.lphedge.v1.Sub" +
+      "mitMarketOrderRequest\032,.aurify.lphedge.v" +
+      "1.SubmitMarketOrderResponse\022b\n\rEnsureSes" +
+      "sion\022\'.aurify.lphedge.v1.EnsureSessionRe" +
+      "quest\032(.aurify.lphedge.v1.SessionStatusR" +
+      "esponse\022e\n\020GetSessionStatus\022\'.aurify.lph" +
+      "edge.v1.SessionStatusRequest\032(.aurify.lp" +
+      "hedge.v1.SessionStatusResponse\022`\n\014CloseS" +
+      "ession\022&.aurify.lphedge.v1.CloseSessionR" +
+      "equest\032(.aurify.lphedge.v1.SessionStatus" +
+      "Response\022p\n\026StreamExecutionReports\0220.aur" +
+      "ify.lphedge.v1.StreamExecutionReportsReq" +
+      "uest\032\".aurify.lphedge.v1.ExecutionReport" +
+      "0\001\022q\n\022GetOrderExecutions\022,.aurify.lphedg" +
+      "e.v1.GetOrderExecutionsRequest\032-.aurify." +
+      "lphedge.v1.GetOrderExecutionsResponseB*\n" +
+      "\021aurify.lphedge.v1B\023LpHedgeGatewayProtoP" +
+      "\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -142,27 +187,51 @@ public final class LpHedgeGatewayProto {
     internal_static_aurify_lphedge_v1_SubmitMarketOrderResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_SubmitMarketOrderResponse_descriptor,
-        new java.lang.String[] { "Success", "ClOrdId", "OrderId", "Status", "AvgPx", "CumQty", "LeavesQty", "Terminal", "ErrorCode", "ErrorMessage", });
-    internal_static_aurify_lphedge_v1_EnsureSessionRequest_descriptor =
+        new java.lang.String[] { "Success", "ClOrdId", "OrderId", "Status", "AvgPx", "CumQty", "LeavesQty", "Terminal", "ErrorCode", "ErrorMessage", "Reports", });
+    internal_static_aurify_lphedge_v1_ExecutionReport_descriptor =
       getDescriptor().getMessageTypes().get(4);
+    internal_static_aurify_lphedge_v1_ExecutionReport_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_aurify_lphedge_v1_ExecutionReport_descriptor,
+        new java.lang.String[] { "LpAccountId", "Provider", "ClOrdId", "OrderId", "ExecId", "ExecType", "OrdStatus", "Symbol", "Side", "OrderQty", "Price", "LastQty", "LastPx", "LeavesQty", "CumQty", "AvgPx", "RejectText", "OrdRejReason", "SecondaryClOrdId", "OccurredAtEpochMs", "Terminal", "RawFix", });
+    internal_static_aurify_lphedge_v1_StreamExecutionReportsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_aurify_lphedge_v1_StreamExecutionReportsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_aurify_lphedge_v1_StreamExecutionReportsRequest_descriptor,
+        new java.lang.String[] { "SinceEpochMs", });
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_aurify_lphedge_v1_GetOrderExecutionsRequest_descriptor,
+        new java.lang.String[] { "ClOrdId", });
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsResponse_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_aurify_lphedge_v1_GetOrderExecutionsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_aurify_lphedge_v1_GetOrderExecutionsResponse_descriptor,
+        new java.lang.String[] { "Success", "Reports", "ErrorCode", "ErrorMessage", });
+    internal_static_aurify_lphedge_v1_EnsureSessionRequest_descriptor =
+      getDescriptor().getMessageTypes().get(8);
     internal_static_aurify_lphedge_v1_EnsureSessionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_EnsureSessionRequest_descriptor,
         new java.lang.String[] { "Session", });
     internal_static_aurify_lphedge_v1_SessionStatusRequest_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_aurify_lphedge_v1_SessionStatusRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_SessionStatusRequest_descriptor,
         new java.lang.String[] { "LpAccountId", });
     internal_static_aurify_lphedge_v1_CloseSessionRequest_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_aurify_lphedge_v1_CloseSessionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_CloseSessionRequest_descriptor,
         new java.lang.String[] { "LpAccountId", });
     internal_static_aurify_lphedge_v1_SessionStatusResponse_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_aurify_lphedge_v1_SessionStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_SessionStatusResponse_descriptor,

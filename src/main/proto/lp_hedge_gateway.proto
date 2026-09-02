@@ -20,6 +20,18 @@ service LpHedgeGateway {
 
   // Log out and drop a session. The next order recreates it.
   rpc CloseSession (CloseSessionRequest) returns (SessionStatusResponse);
+
+  // Every execution report the gateway sees, as it sees it.
+  //
+  // SubmitMarketOrder answers with what was known when the RPC completed; an
+  // LP keeps talking about an order after that (further partial fills, a late
+  // correction, the resolution of an order that timed out). The caller owns the
+  // execution ledger, so it subscribes here and records the rest itself.
+  rpc StreamExecutionReports (StreamExecutionReportsRequest) returns (stream ExecutionReport);
+
+  // Everything the journal still holds for one order. Lets the caller backfill
+  // an order it has no complete record of without waiting for a live report.
+  rpc GetOrderExecutions (GetOrderExecutionsRequest) returns (GetOrderExecutionsResponse);
 }
 
 // One FIX session's connection parameters. Carries credentials, so this
@@ -87,6 +99,58 @@ message SubmitMarketOrderResponse {
   bool   terminal = 8;
   string error_code = 9;
   string error_message = 10;
+
+  // Every report seen for this order while the call was open, in arrival order
+  // - the intermediate acknowledgements as well as the one that completed it.
+  // Fields 2-8 stay as the summary of the last of them, so an existing caller
+  // that ignores this keeps working.
+  repeated ExecutionReport reports = 11;
+}
+
+// One FIX ExecutionReport, provider-neutral. The unit of the caller's
+// execution ledger: exec_id identifies it uniquely within an order, which is
+// what makes recording it idempotent across a replay or a reconnect.
+message ExecutionReport {
+  string lp_account_id = 1;
+  string provider = 2;
+  string cl_ord_id = 3;
+  string order_id = 4;
+  string exec_id = 5;
+  string exec_type = 6;                 // NEW | PENDING_NEW | FILL | REJECTED | CANCELLED | UNKNOWN
+  string ord_status = 7;
+  string symbol = 8;
+  string side = 9;                      // BUY | SELL
+  double order_qty = 10;
+  double price = 11;
+  double last_qty = 12;                 // this fill
+  double last_px = 13;
+  double leaves_qty = 14;
+  double cum_qty = 15;                  // the order so far
+  double avg_px = 16;
+  string reject_text = 17;
+  int32  ord_rej_reason = 18;
+  string secondary_cl_ord_id = 19;
+  int64  occurred_at_epoch_ms = 20;
+  bool   terminal = 21;
+  string raw_fix = 22;                  // verbatim FIX message, for the audit trail
+}
+
+message StreamExecutionReportsRequest {
+  // Replay what the journal still holds from this instant before switching to
+  // live delivery, so a reconnecting subscriber does not lose the gap.
+  // 0 = live reports only.
+  int64 since_epoch_ms = 1;
+}
+
+message GetOrderExecutionsRequest {
+  string cl_ord_id = 1;
+}
+
+message GetOrderExecutionsResponse {
+  bool   success = 1;
+  repeated ExecutionReport reports = 2;
+  string error_code = 3;
+  string error_message = 4;
 }
 
 message EnsureSessionRequest {

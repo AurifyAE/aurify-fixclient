@@ -6,10 +6,15 @@ import com.aurify.fixclient.canonical.event.CanonicalReject;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Correlates a synchronous gRPC call with the asynchronous FIX execution report.
  *
@@ -18,11 +23,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class PendingOrderRegistry {
+
+    /**
+     * How long a settled order stays addressable. It is the idempotency window:
+     * a retry arriving inside it is answered from the original order rather than
+     * sent to the venue twice. Long enough to cover a caller's retries, short
+     * enough that the maps cannot grow without bound - they previously kept
+     * every order the gateway had ever seen.
+     */
+    private static final long COMPLETED_RETENTION_MS = 10 * 60_000L;
+
     private final ConcurrentHashMap<String, PendingOrder> byIdempotencyKey = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, PendingOrder> byClOrdId = new ConcurrentHashMap<>();
 
     public Registration register(String idempotencyKey, String clOrdId) {
-        PendingOrder candidate = new PendingOrder();
+        PendingOrder candidate = new PendingOrder(idempotencyKey, clOrdId);
         PendingOrder existing = byIdempotencyKey.putIfAbsent(idempotencyKey, candidate);
         if (existing != null) return new Registration(existing, false);
         byClOrdId.put(clOrdId, candidate);
@@ -41,8 +56,11 @@ public class PendingOrderRegistry {
      * PENDING_NEW ("Command queued") and, milliseconds later, the real outcome.
      * Answering on the first report would report an order as accepted that the
      * venue went on to reject - the caller would book a hedge that does not
-     * exist. Intermediate acks are kept so a timeout can still report what is
-     * known, clearly marked non-terminal.
+     * exist.
+     *
+     * Every report is kept, not just the last one: the caller records the whole
+     * execution history of an order, so the intermediate acknowledgements and
+     * the individual partial fills are part of the answer, not noise.
      */
     @EventListener
     public void onExecutionReport(CanonicalExecutionReport report) {
@@ -50,7 +68,9 @@ public class PendingOrderRegistry {
         if (pending == null) {
             return;
         }
+        pending.reports.add(report);
         if (isTerminal(report.getOrdStatus())) {
+            pending.markSettled();
             pending.future.complete(report);
         } else {
             log.debug("Order {} acknowledged as {} - waiting for a terminal report",
@@ -76,7 +96,25 @@ public class PendingOrderRegistry {
         }
         log.warn("Order {} rejected by {}: reason={} text={}",
                 refId, reject.getProvider(), reject.getReasonCode(), reject.getText());
+        pending.markSettled();
         pending.future.completeExceptionally(new OrderRejectedException(reject));
+    }
+
+    /**
+     * Drops orders that settled long enough ago that no retry can still refer to
+     * them. Reports arriving after this are not lost: the execution journal
+     * records every report independently of whether a call is waiting for it.
+     */
+    @Scheduled(fixedDelay = 60_000L)
+    void sweepSettled() {
+        long cutoff = System.currentTimeMillis() - COMPLETED_RETENTION_MS;
+        byIdempotencyKey.values().removeIf(pending -> {
+            if (!pending.isSettledBefore(cutoff)) {
+                return false;
+            }
+            byClOrdId.remove(pending.clOrdId, pending);
+            return true;
+        });
     }
 
     static boolean isTerminal(CanonicalOrdStatus status) {
@@ -112,10 +150,37 @@ public class PendingOrderRegistry {
         public CanonicalExecutionReport getLastAck() {
             return pendingOrder.lastAck;
         }
+
+        /** Everything the venue said about this order while the call was open. */
+        public List<CanonicalExecutionReport> getReports() {
+            return List.copyOf(pendingOrder.reports);
+        }
     }
 
     public static class PendingOrder {
+        private final String idempotencyKey;
+        private final String clOrdId;
         private final CompletableFuture<CanonicalExecutionReport> future = new CompletableFuture<>();
+        private final Queue<CanonicalExecutionReport> reports = new ConcurrentLinkedQueue<>();
+        private final AtomicLong settledAtEpochMs = new AtomicLong(0L);
         private volatile CanonicalExecutionReport lastAck;
+
+        PendingOrder(String idempotencyKey, String clOrdId) {
+            this.idempotencyKey = idempotencyKey;
+            this.clOrdId = clOrdId;
+        }
+
+        void markSettled() {
+            settledAtEpochMs.compareAndSet(0L, System.currentTimeMillis());
+        }
+
+        boolean isSettledBefore(long epochMs) {
+            long settled = settledAtEpochMs.get();
+            return settled != 0L && settled < epochMs;
+        }
+
+        public String getIdempotencyKey() {
+            return idempotencyKey;
+        }
     }
 }

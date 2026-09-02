@@ -39,6 +39,15 @@ fix-gateway:
     file-store-path: data/store
     file-log-path: data/log
 
+  # Replay buffer for execution reports, so nothing the venue says about an
+  # order is lost between arriving and the caller recording it. Deliberately
+  # bounded: the durable execution ledger belongs to the caller, not here.
+  execution-journal:
+    retention-minutes: 120
+    max-reports: 20000
+    max-reports-per-order: 200
+    sweep-interval-ms: 60000
+
   pipeline:
     inbound-queue-capacity: 10000
     outbound-queue-capacity: 5000

@@ -97,4 +97,63 @@ public interface SubmitMarketOrderResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorMessageBytes();
+
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  java.util.List<aurify.lphedge.v1.ExecutionReport> 
+      getReportsList();
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  aurify.lphedge.v1.ExecutionReport getReports(int index);
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  int getReportsCount();
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  java.util.List<? extends aurify.lphedge.v1.ExecutionReportOrBuilder> 
+      getReportsOrBuilderList();
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  aurify.lphedge.v1.ExecutionReportOrBuilder getReportsOrBuilder(
+      int index);
 }

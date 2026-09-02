@@ -21,8 +21,16 @@ public class InboundProcessingPipeline {
     void subscribe() {
         inboundMessageQueue.stream()
                 .publishOn(Schedulers.boundedElastic())
-                .doOnNext(persistenceGateway::persistCanonicalEvent)
+                .doOnNext(inbound -> persistenceGateway.persistCanonicalEvent(inbound.event()))
+                // The envelope goes first, and the order matters: it is what the
+                // execution journal records from, while the bare event is what
+                // completes the waiting gRPC call. Publishing the event first
+                // would let a call answer an order before the journal held the
+                // report that settled it, so the response could not include it.
                 .doOnNext(eventPublisher::publish)
+                // The bare canonical event is what every other listener
+                // subscribes to, and stays the contract for them.
+                .doOnNext(inbound -> eventPublisher.publish(inbound.event()))
                 .doOnError(e -> log.error("Inbound pipeline error", e))
                 .retry()
                 .subscribe();

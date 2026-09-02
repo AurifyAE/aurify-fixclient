@@ -17,7 +17,7 @@ class LpHedgeGatewayServiceTimeoutTest {
     private LpHedgeGatewayService serviceWithOrderTimeout(long orderTimeoutMs) {
         GrpcGatewayProperties properties = new GrpcGatewayProperties();
         properties.setOrderTimeoutMs(orderTimeoutMs);
-        return new LpHedgeGatewayService(null, null, properties, null);
+        return new LpHedgeGatewayService(null, null, properties, null, null);
     }
 
     @Test

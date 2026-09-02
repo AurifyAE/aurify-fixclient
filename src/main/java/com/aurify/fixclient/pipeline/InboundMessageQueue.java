@@ -13,17 +13,17 @@ import reactor.core.publisher.Sinks;
 @Component
 public class InboundMessageQueue {
 
-    private final Sinks.Many<CanonicalEvent> sink =
+    private final Sinks.Many<InboundEvent> sink =
             Sinks.many().multicast().onBackpressureBuffer(10_000, false);
 
-    public void offer(SessionID sessionId, CanonicalEvent event) {
-        Sinks.EmitResult result = sink.tryEmitNext(event);
+    public void offer(SessionID sessionId, String rawFix, CanonicalEvent event) {
+        Sinks.EmitResult result = sink.tryEmitNext(new InboundEvent(sessionId, rawFix, event));
         if (result.isFailure()) {
             log.warn("Inbound queue offer failed for {} ({}): {}", sessionId, event.provider(), result);
         }
     }
 
-    public Flux<CanonicalEvent> stream() {
+    public Flux<InboundEvent> stream() {
         return sink.asFlux();
     }
 }

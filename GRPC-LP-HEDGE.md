@@ -8,14 +8,33 @@ The gateway listens on `0.0.0.0:9090` by default. It accepts the supplied
 2. It constructs a provider-neutral market `CanonicalOrderRequest` and sends it
    through the configured provider adapter (`fxcubic` by default).
 3. QuickFIX/J receives an `ExecutionReport`; the existing inbound pipeline maps
-   it to `CanonicalExecutionReport`.
-4. The gRPC call completes with that execution report. The first report is an
-   acknowledgement (NEW, FILL, or REJECTED); it is not a subscription to later
-   fills.
+   it to `CanonicalExecutionReport` and the `ExecutionJournal` records it.
+4. The gRPC call completes on the first **terminal** report (FILLED, REJECTED or
+   CANCELLED). It does not complete on the first report of any kind: FXCubic
+   acknowledges with PENDING_NEW and decides milliseconds later, so answering on
+   the ack would report a hedge the venue went on to reject.
+5. The response carries `reports` — every report seen while the call was open,
+   not only the one that ended it.
 
-`lp_api_key` is deliberately not put into the FIX message or logged. Authenticate
-the Node caller with mTLS or a gRPC interceptor and configure LP credentials on
-the Java gateway. Do not trust per-order credentials supplied by callers.
+## Reports that arrive after the call
+
+A venue keeps talking about an order after the RPC has answered: further partial
+fills, or the eventual outcome of an order whose call timed out. Those have no
+request to ride back on, so the caller subscribes to
+`StreamExecutionReports` and records them itself. `since_epoch_ms` replays what
+the journal still holds before going live, so a reconnect inside the retention
+window loses nothing. `GetOrderExecutions` backfills one order on demand.
+
+The journal (`fix-gateway.execution-journal.*`) is a bounded, non-durable replay
+buffer, **not** a store — the durable execution ledger belongs to the caller.
+Sizing it like a database would move business state back into the gateway, which
+is exactly what this design keeps out.
+
+LP credentials arrive per request inside `LpSessionSpec` and are injected into
+the FIX Logon only — never into an application message, and never logged. The
+`lp_api_key` field is removed from the proto (its field number is reserved).
+Because this channel carries live venue passwords, authenticate the Node caller
+with mTLS anywhere but loopback.
 
 ## Start
 

@@ -40,7 +40,7 @@ public class GatewayMessageCracker extends MessageCracker {
     }
 
     public void onMessage(ExecutionReport report, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(report, sessionId));
+        enqueue(sessionId, report, adapter -> adapter.mapIncoming(report, sessionId));
     }
 
     /** Market data is out of scope for this trading-only gateway. Dropped with a
@@ -51,27 +51,29 @@ public class GatewayMessageCracker extends MessageCracker {
     }
 
     public void onMessage(MarketDataRequestReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(reject, sessionId));
+        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
     }
 
     public void onMessage(OrderCancelReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(reject, sessionId));
+        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
     }
 
     public void onMessage(Reject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(reject, sessionId));
+        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
     }
 
     public void onMessage(BusinessMessageReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, adapter -> adapter.mapIncoming(reject, sessionId));
+        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
     }
 
-    private void enqueue(SessionID sessionId, IncomingMapperFn mapperFn) {
+    /** The raw message travels with the event so the execution journal can keep
+     *  an auditable record of exactly what the venue sent. */
+    private void enqueue(SessionID sessionId, Message raw, IncomingMapperFn mapperFn) {
         adapterRegistry.resolveForSession(sessionId).ifPresentOrElse(
                 adapter -> {
                     try {
                         CanonicalEvent event = mapperFn.map(adapter);
-                        inboundMessageQueue.offer(sessionId, event);
+                        inboundMessageQueue.offer(sessionId, raw.toString(), event);
                     } catch (FieldNotFound e) {
                         log.error("Field missing while mapping inbound message for {}", sessionId, e);
                     }

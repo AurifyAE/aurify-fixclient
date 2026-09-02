@@ -22,6 +22,7 @@ private static final long serialVersionUID = 0L;
     status_ = "";
     errorCode_ = "";
     errorMessage_ = "";
+    reports_ = java.util.Collections.emptyList();
   }
 
   @java.lang.Override
@@ -294,6 +295,82 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int REPORTS_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private java.util.List<aurify.lphedge.v1.ExecutionReport> reports_;
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  @java.lang.Override
+  public java.util.List<aurify.lphedge.v1.ExecutionReport> getReportsList() {
+    return reports_;
+  }
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends aurify.lphedge.v1.ExecutionReportOrBuilder> 
+      getReportsOrBuilderList() {
+    return reports_;
+  }
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  @java.lang.Override
+  public int getReportsCount() {
+    return reports_.size();
+  }
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  @java.lang.Override
+  public aurify.lphedge.v1.ExecutionReport getReports(int index) {
+    return reports_.get(index);
+  }
+  /**
+   * <pre>
+   * Every report seen for this order while the call was open, in arrival order
+   * - the intermediate acknowledgements as well as the one that completed it.
+   * Fields 2-8 stay as the summary of the last of them, so an existing caller
+   * that ignores this keeps working.
+   * </pre>
+   *
+   * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+   */
+  @java.lang.Override
+  public aurify.lphedge.v1.ExecutionReportOrBuilder getReportsOrBuilder(
+      int index) {
+    return reports_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -337,6 +414,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(errorMessage_)) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 10, errorMessage_);
+    }
+    for (int i = 0; i < reports_.size(); i++) {
+      output.writeMessage(11, reports_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -382,6 +462,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(errorMessage_)) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(10, errorMessage_);
     }
+    for (int i = 0; i < reports_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, reports_.get(i));
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -420,6 +504,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getErrorCode())) return false;
     if (!getErrorMessage()
         .equals(other.getErrorMessage())) return false;
+    if (!getReportsList()
+        .equals(other.getReportsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -456,6 +542,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getErrorCode().hashCode();
     hash = (37 * hash) + ERROR_MESSAGE_FIELD_NUMBER;
     hash = (53 * hash) + getErrorMessage().hashCode();
+    if (getReportsCount() > 0) {
+      hash = (37 * hash) + REPORTS_FIELD_NUMBER;
+      hash = (53 * hash) + getReportsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -597,6 +687,13 @@ private static final long serialVersionUID = 0L;
       terminal_ = false;
       errorCode_ = "";
       errorMessage_ = "";
+      if (reportsBuilder_ == null) {
+        reports_ = java.util.Collections.emptyList();
+      } else {
+        reports_ = null;
+        reportsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000400);
       return this;
     }
 
@@ -623,9 +720,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public aurify.lphedge.v1.SubmitMarketOrderResponse buildPartial() {
       aurify.lphedge.v1.SubmitMarketOrderResponse result = new aurify.lphedge.v1.SubmitMarketOrderResponse(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(aurify.lphedge.v1.SubmitMarketOrderResponse result) {
+      if (reportsBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0)) {
+          reports_ = java.util.Collections.unmodifiableList(reports_);
+          bitField0_ = (bitField0_ & ~0x00000400);
+        }
+        result.reports_ = reports_;
+      } else {
+        result.reports_ = reportsBuilder_.build();
+      }
     }
 
     private void buildPartial0(aurify.lphedge.v1.SubmitMarketOrderResponse result) {
@@ -746,6 +856,32 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000200;
         onChanged();
       }
+      if (reportsBuilder_ == null) {
+        if (!other.reports_.isEmpty()) {
+          if (reports_.isEmpty()) {
+            reports_ = other.reports_;
+            bitField0_ = (bitField0_ & ~0x00000400);
+          } else {
+            ensureReportsIsMutable();
+            reports_.addAll(other.reports_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.reports_.isEmpty()) {
+          if (reportsBuilder_.isEmpty()) {
+            reportsBuilder_.dispose();
+            reportsBuilder_ = null;
+            reports_ = other.reports_;
+            bitField0_ = (bitField0_ & ~0x00000400);
+            reportsBuilder_ = 
+              com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                 getReportsFieldBuilder() : null;
+          } else {
+            reportsBuilder_.addAllMessages(other.reports_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -822,6 +958,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              aurify.lphedge.v1.ExecutionReport m =
+                  input.readMessage(
+                      aurify.lphedge.v1.ExecutionReport.parser(),
+                      extensionRegistry);
+              if (reportsBuilder_ == null) {
+                ensureReportsIsMutable();
+                reports_.add(m);
+              } else {
+                reportsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1357,6 +1506,372 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000200;
       onChanged();
       return this;
+    }
+
+    private java.util.List<aurify.lphedge.v1.ExecutionReport> reports_ =
+      java.util.Collections.emptyList();
+    private void ensureReportsIsMutable() {
+      if (!((bitField0_ & 0x00000400) != 0)) {
+        reports_ = new java.util.ArrayList<aurify.lphedge.v1.ExecutionReport>(reports_);
+        bitField0_ |= 0x00000400;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilderV3<
+        aurify.lphedge.v1.ExecutionReport, aurify.lphedge.v1.ExecutionReport.Builder, aurify.lphedge.v1.ExecutionReportOrBuilder> reportsBuilder_;
+
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public java.util.List<aurify.lphedge.v1.ExecutionReport> getReportsList() {
+      if (reportsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(reports_);
+      } else {
+        return reportsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public int getReportsCount() {
+      if (reportsBuilder_ == null) {
+        return reports_.size();
+      } else {
+        return reportsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public aurify.lphedge.v1.ExecutionReport getReports(int index) {
+      if (reportsBuilder_ == null) {
+        return reports_.get(index);
+      } else {
+        return reportsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder setReports(
+        int index, aurify.lphedge.v1.ExecutionReport value) {
+      if (reportsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureReportsIsMutable();
+        reports_.set(index, value);
+        onChanged();
+      } else {
+        reportsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder setReports(
+        int index, aurify.lphedge.v1.ExecutionReport.Builder builderForValue) {
+      if (reportsBuilder_ == null) {
+        ensureReportsIsMutable();
+        reports_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        reportsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder addReports(aurify.lphedge.v1.ExecutionReport value) {
+      if (reportsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureReportsIsMutable();
+        reports_.add(value);
+        onChanged();
+      } else {
+        reportsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder addReports(
+        int index, aurify.lphedge.v1.ExecutionReport value) {
+      if (reportsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureReportsIsMutable();
+        reports_.add(index, value);
+        onChanged();
+      } else {
+        reportsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder addReports(
+        aurify.lphedge.v1.ExecutionReport.Builder builderForValue) {
+      if (reportsBuilder_ == null) {
+        ensureReportsIsMutable();
+        reports_.add(builderForValue.build());
+        onChanged();
+      } else {
+        reportsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder addReports(
+        int index, aurify.lphedge.v1.ExecutionReport.Builder builderForValue) {
+      if (reportsBuilder_ == null) {
+        ensureReportsIsMutable();
+        reports_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        reportsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder addAllReports(
+        java.lang.Iterable<? extends aurify.lphedge.v1.ExecutionReport> values) {
+      if (reportsBuilder_ == null) {
+        ensureReportsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, reports_);
+        onChanged();
+      } else {
+        reportsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder clearReports() {
+      if (reportsBuilder_ == null) {
+        reports_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000400);
+        onChanged();
+      } else {
+        reportsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public Builder removeReports(int index) {
+      if (reportsBuilder_ == null) {
+        ensureReportsIsMutable();
+        reports_.remove(index);
+        onChanged();
+      } else {
+        reportsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public aurify.lphedge.v1.ExecutionReport.Builder getReportsBuilder(
+        int index) {
+      return getReportsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public aurify.lphedge.v1.ExecutionReportOrBuilder getReportsOrBuilder(
+        int index) {
+      if (reportsBuilder_ == null) {
+        return reports_.get(index);  } else {
+        return reportsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public java.util.List<? extends aurify.lphedge.v1.ExecutionReportOrBuilder> 
+         getReportsOrBuilderList() {
+      if (reportsBuilder_ != null) {
+        return reportsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(reports_);
+      }
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public aurify.lphedge.v1.ExecutionReport.Builder addReportsBuilder() {
+      return getReportsFieldBuilder().addBuilder(
+          aurify.lphedge.v1.ExecutionReport.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public aurify.lphedge.v1.ExecutionReport.Builder addReportsBuilder(
+        int index) {
+      return getReportsFieldBuilder().addBuilder(
+          index, aurify.lphedge.v1.ExecutionReport.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Every report seen for this order while the call was open, in arrival order
+     * - the intermediate acknowledgements as well as the one that completed it.
+     * Fields 2-8 stay as the summary of the last of them, so an existing caller
+     * that ignores this keeps working.
+     * </pre>
+     *
+     * <code>repeated .aurify.lphedge.v1.ExecutionReport reports = 11;</code>
+     */
+    public java.util.List<aurify.lphedge.v1.ExecutionReport.Builder> 
+         getReportsBuilderList() {
+      return getReportsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilderV3<
+        aurify.lphedge.v1.ExecutionReport, aurify.lphedge.v1.ExecutionReport.Builder, aurify.lphedge.v1.ExecutionReportOrBuilder> 
+        getReportsFieldBuilder() {
+      if (reportsBuilder_ == null) {
+        reportsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+            aurify.lphedge.v1.ExecutionReport, aurify.lphedge.v1.ExecutionReport.Builder, aurify.lphedge.v1.ExecutionReportOrBuilder>(
+                reports_,
+                ((bitField0_ & 0x00000400) != 0),
+                getParentForChildren(),
+                isClean());
+        reports_ = null;
+      }
+      return reportsBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
