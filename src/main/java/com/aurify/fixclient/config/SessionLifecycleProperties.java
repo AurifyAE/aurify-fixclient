@@ -12,8 +12,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "fix-gateway.session")
 public class SessionLifecycleProperties {
 
-    /** Kept below the caller's RPC deadline so a slow logon fails as a clear error. */
-    private int logonTimeoutSeconds = 8;
+    /**
+     * Kept below the caller's RPC deadline so a slow logon fails as a clear error.
+     *
+     * Also drives QuickFIX's own LogonTimeout (see QuickFixSessionConfigFactory):
+     * leaving that at its 10s default caps every logon regardless of this value.
+     */
+    private int logonTimeoutSeconds = 25;
 
     /** Sessions unused for this long are logged out. Zero disables reaping. */
     private int idleTimeoutMinutes = 30;

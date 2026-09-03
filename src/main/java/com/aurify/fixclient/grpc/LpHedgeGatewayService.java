@@ -224,8 +224,21 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                 .side("SELL".equalsIgnoreCase(request.getSide()) ? CanonicalSide.SELL : CanonicalSide.BUY)
                 .orderQty(BigDecimal.valueOf(request.getQuantity()))
                 .ordType(CanonicalOrderRequest.OrdType.MARKET)
-                .timeInForce(CanonicalOrderRequest.TimeInForce.IOC)
+                .timeInForce(resolveTimeInForce(request.getTimeInForce()))
+                .partyId(spec.partyIdOrNull())
                 .build();
+    }
+
+    /** Blank means "provider default" - IOC, matching every caller before this field existed. */
+    private CanonicalOrderRequest.TimeInForce resolveTimeInForce(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return CanonicalOrderRequest.TimeInForce.IOC;
+        }
+        try {
+            return CanonicalOrderRequest.TimeInForce.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CanonicalOrderRequest.TimeInForce.IOC;
+        }
     }
 
     /* A deterministic ID lets a retry match the original outbound FIX order. */

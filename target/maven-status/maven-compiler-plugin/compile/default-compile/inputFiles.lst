@@ -49,6 +49,11 @@ D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipe
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\OutboundDispatchPipeline.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\pipeline\OutboundRequestQueue.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\AbstractQuickFixProviderAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\finalto\FinaltoIncomingMapper.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\finalto\FinaltoOutgoingBuilder.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\finalto\FinaltoProviderAdapter.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\finalto\FinaltoStartupWorkflow.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\finalto\FinaltoSymbolNormalizer.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicIncomingMapper.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicOutgoingBuilder.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\provider\fxcubic\FxCubicProviderAdapter.java

@@ -69,6 +69,10 @@ message LpSessionSpec {
   // Left empty, tag 1 is omitted rather than filled with something the LP
   // will reject.
   string account = 10;
+
+  // NewOrderSingle PartyID (tag 448) - required by providers that mandate a
+  // NoPartyIDs group (e.g. Finalto). Left empty, the group is omitted.
+  string party_id = 11;
 }
 
 message SubmitMarketOrderRequest {
@@ -86,6 +90,7 @@ message SubmitMarketOrderRequest {
   string branch_id = 10;
   string correlation_id = 11;
   LpSessionSpec session = 12;           // required
+  string time_in_force = 13;            // IOC | FOK | GTC | DAY; empty = provider default (IOC)
 }
 
 message SubmitMarketOrderResponse {

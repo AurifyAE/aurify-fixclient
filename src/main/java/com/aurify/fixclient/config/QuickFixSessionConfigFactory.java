@@ -6,6 +6,7 @@ import com.aurify.fixclient.session.SessionRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import quickfix.Session;
 import quickfix.SessionID;
 import quickfix.SessionSettings;
 import quickfix.mina.ssl.SSLSupport;
@@ -63,6 +64,18 @@ public class QuickFixSessionConfigFactory {
         settings.setString(sessionId, "StartTime", session.startTime());
         settings.setString(sessionId, "EndTime", session.endTime());
         settings.setString(sessionId, "DataDictionary", dataDictionaryFor(spec));
+        settings.setBool(sessionId, Session.SETTING_VALIDATE_USER_DEFINED_FIELDS,
+                validateUserDefinedFieldsFor(spec));
+
+        // QuickFIX runs its OWN logon timer (LogonTimeout, default 10s) and
+        // disconnects with "Timed out waiting for logon response" when it
+        // expires. Left unset, that 10s silently caps how long an LP is given
+        // to answer no matter what DynamicSessionManager.awaitLogon waits for,
+        // so a slow venue can never log on and the cause is invisible from the
+        // gateway's own configuration. Kept just inside our wait so that when
+        // an LP really is too slow, awaitLogon is what reports it.
+        settings.setLong(sessionId, Session.SETTING_LOGON_TIMEOUT,
+                Math.max(1, lifecycleProperties.getLogonTimeoutSeconds() - 1));
 
         if (session.useSsl()) {
             settings.setString(sessionId, SSLSupport.SETTING_USE_SSL, "Y");
@@ -91,5 +104,12 @@ public class QuickFixSessionConfigFactory {
         return adapterRegistry.resolve(spec.provider())
                 .map(adapter -> adapter.dataDictionary(spec.fixVersion()))
                 .orElseGet(() -> spec.fixVersion().replace(".", "") + ".xml");
+    }
+
+    /** Defaults to QuickFIX's own default (true) when no adapter is registered. */
+    boolean validateUserDefinedFieldsFor(LpSessionSpec spec) {
+        return adapterRegistry.resolve(spec.provider())
+                .map(com.aurify.fixclient.provider.LiquidityProviderAdapter::validateUserDefinedFields)
+                .orElse(true);
     }
 }

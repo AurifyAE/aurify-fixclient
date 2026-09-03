@@ -9,61 +9,52 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import quickfix.FieldNotFound;
 import quickfix.Message;
-import quickfix.MessageCracker;
 import quickfix.SessionID;
-import quickfix.fix43.ExecutionReport;
-import quickfix.fix43.MarketDataRequestReject;
-import quickfix.fix43.MarketDataSnapshotFullRefresh;
-import quickfix.fix43.OrderCancelReject;
-import quickfix.fix43.Reject;
-import quickfix.fix43.BusinessMessageReject;
+import quickfix.field.MsgType;
 
 /**
- * Typed router: each FIX message class is delegated to a dedicated handler
- * path. Extend by overriding additional onMessage(...) overloads — never by
- * adding a switch on MsgType elsewhere in the codebase.
+ * Routes an inbound application message by MsgType (tag 35), not by its typed
+ * FIX-version class. {@code LiquidityProviderAdapter.mapIncoming} already
+ * takes a version-neutral {@code Message} - it was the old {@code
+ * MessageCracker}-based dispatch here, reflecting on {@code
+ * quickfix.fix43.*} classes, that forced a new typed {@code onMessage}
+ * overload (and a touch of this file) for every FIX version a new LP might
+ * speak. Adding FIX 4.4 (Finalto) needs none, and no future version will
+ * either: a version's message classes only need to be on the classpath
+ * (added in pom.xml) for {@code DefaultMessageFactory} to construct them and
+ * the resolved dictionary to validate them, both upstream of this router.
+ *
+ * MsgTypes this gateway cares about are routed to the session's provider
+ * adapter; everything else (market data, and anything not yet handled) is
+ * dropped with a debug log line rather than thrown - an unhandled MsgType
+ * must never look like a mapping failure.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class GatewayMessageCracker extends MessageCracker {
+public class GatewayMessageCracker {
 
     private final ProviderAdapterRegistry adapterRegistry;
     private final InboundMessageQueue inboundMessageQueue;
 
     public void crack(Message message, SessionID sessionId) {
         try {
-            super.crack(message, sessionId); // dispatches to onMessage overloads below via reflection
+            String msgType = message.getHeader().getString(MsgType.FIELD);
+            switch (msgType) {
+                case MsgType.EXECUTION_REPORT,
+                     MsgType.ORDER_CANCEL_REJECT,
+                     MsgType.REJECT,
+                     MsgType.BUSINESS_MESSAGE_REJECT,
+                     MsgType.MARKET_DATA_REQUEST_REJECT ->
+                        enqueue(sessionId, message, adapter -> adapter.mapIncoming(message, sessionId));
+                case MsgType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ->
+                        log.debug("Ignoring market data snapshot on {} - gateway is trading-only", sessionId);
+                default ->
+                        log.debug("Ignoring unhandled MsgType {} on {}", msgType, sessionId);
+            }
         } catch (Exception e) {
             log.error("Failed to crack message from {}: {}", sessionId, message, e);
         }
-    }
-
-    public void onMessage(ExecutionReport report, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, report, adapter -> adapter.mapIncoming(report, sessionId));
-    }
-
-    /** Market data is out of scope for this trading-only gateway. Dropped with a
-     *  log line rather than routed, so it never reaches a mapper that would
-     *  throw on it. */
-    public void onMessage(MarketDataSnapshotFullRefresh snapshot, SessionID sessionId) {
-        log.debug("Ignoring market data snapshot on {} - gateway is trading-only", sessionId);
-    }
-
-    public void onMessage(MarketDataRequestReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
-    }
-
-    public void onMessage(OrderCancelReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
-    }
-
-    public void onMessage(Reject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
-    }
-
-    public void onMessage(BusinessMessageReject reject, SessionID sessionId) throws FieldNotFound {
-        enqueue(sessionId, reject, adapter -> adapter.mapIncoming(reject, sessionId));
     }
 
     /** The raw message travels with the event so the execution journal can keep

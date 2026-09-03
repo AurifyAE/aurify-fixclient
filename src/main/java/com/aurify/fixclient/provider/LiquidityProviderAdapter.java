@@ -44,4 +44,20 @@ public interface LiquidityProviderAdapter {
     default String dataDictionary(String fixVersion) {
         return fixVersion.replace(".", "") + ".xml";
     }
+
+    /**
+     * Whether the session's data dictionary must be able to name every custom
+     * tag the provider sends. True (the default) is the safe choice - it is
+     * QuickFIX's own default and matches a provider with no custom tags, or
+     * one whose custom tags are already declared in a forked dictionary (e.g.
+     * FXCubic's {@code FIX43-fxcubic.xml}, tag 583).
+     *
+     * A provider whose custom tags are all in the user-defined range
+     * (>= 5000) can instead override this to {@code false} and skip
+     * forking a dictionary entirely - QuickFIX accepts an undeclared
+     * user-defined tag without complaint once validation is off for it.
+     */
+    default boolean validateUserDefinedFields() {
+        return true;
+    }
 }

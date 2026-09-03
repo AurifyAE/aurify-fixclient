@@ -23,7 +23,8 @@ public record LpSessionSpec(
         double maxPositionPerSymbol,
         double maxTotalExposure,
         String specFingerprint,
-        String account
+        String account,
+        String partyId
 ) {
 
     public LpSessionSpec {
@@ -34,11 +35,17 @@ public record LpSessionSpec(
         allowedSymbols = allowedSymbols == null ? Set.of() : Set.copyOf(allowedSymbols);
         specFingerprint = blankTo(specFingerprint, "");
         account = blankTo(account, "");
+        partyId = blankTo(partyId, "");
     }
 
     /** The LP-side account for FIX tag 1, or null when the caller set none. */
     public String accountOrNull() {
         return account.isEmpty() ? null : account;
+    }
+
+    /** NewOrderSingle PartyID (tag 448), or null when the caller set none. */
+    public String partyIdOrNull() {
+        return partyId.isEmpty() ? null : partyId;
     }
 
     /** The subset an adapter is allowed to see: limits and symbols, no credentials. */

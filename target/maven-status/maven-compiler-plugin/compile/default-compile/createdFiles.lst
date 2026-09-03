@@ -11,6 +11,7 @@ aurify\lphedge\v1\LpHedgeGatewayGrpc$2.class
 aurify\lphedge\v1\StreamExecutionReportsRequestOrBuilder.class
 aurify\lphedge\v1\SessionStatusResponse$Builder.class
 com\aurify\fixclient\grpc\PendingOrderRegistry$OrderRejectedException.class
+com\aurify\fixclient\provider\finalto\FinaltoOutgoingBuilder.class
 com\aurify\fixclient\pipeline\OutboundDispatchPipeline.class
 com\aurify\fixclient\canonical\event\CanonicalExecutionReport$CanonicalExecutionReportBuilder.class
 com\aurify\fixclient\persistence\entity\CanonicalEventEntity.class
@@ -50,6 +51,7 @@ aurify\lphedge\v1\ExecutionReport$Builder.class
 aurify\lphedge\v1\SubmitMarketOrderResponse$1.class
 com\aurify\fixclient\canonical\event\CanonicalOrderRequest$CanonicalOrderRequestBuilder.class
 com\aurify\fixclient\config\QuickFixInitiatorConfig.class
+com\aurify\fixclient\provider\finalto\FinaltoStartupWorkflow.class
 aurify\lphedge\v1\GetOrderExecutionsResponse$Builder.class
 com\aurify\fixclient\events\SessionConnectedEvent.class
 aurify\lphedge\v1\GetOrderExecutionsResponse$1.class
@@ -63,12 +65,14 @@ com\aurify\fixclient\session\SessionStatusSnapshot$SessionStatusSnapshotBuilder.
 com\aurify\fixclient\session\SessionState.class
 com\aurify\fixclient\provider\fxcubic\FxCubicOutgoingBuilder.class
 aurify\lphedge\v1\ExecutionReport$1.class
+com\aurify\fixclient\provider\finalto\FinaltoSymbolNormalizer.class
 aurify\lphedge\v1\EnsureSessionRequestOrBuilder.class
 com\aurify\fixclient\canonical\event\CanonicalEvent.class
 aurify\lphedge\v1\ExecutionReport.class
 com\aurify\fixclient\session\LpSessionEntry.class
 aurify\lphedge\v1\CloseSessionRequestOrBuilder.class
 com\aurify\fixclient\provider\OutboundPolicy.class
+com\aurify\fixclient\provider\finalto\FinaltoOutgoingBuilder$1.class
 com\aurify\fixclient\session\LpSessionRegistry.class
 com\aurify\fixclient\canonical\event\CanonicalOrderRequest.class
 com\aurify\fixclient\provider\ProviderAdapterRegistry.class
@@ -83,11 +87,13 @@ com\aurify\fixclient\canonical\event\CanonicalOrderRequest$OrdType.class
 com\aurify\fixclient\config\ExecutionJournalProperties.class
 com\aurify\fixclient\config\ProviderProperties$Persistence.class
 com\aurify\fixclient\canonical\event\CanonicalExecutionReport.class
+com\aurify\fixclient\provider\finalto\FinaltoProviderAdapter.class
 aurify\lphedge\v1\SubmitMarketOrderRequest$Builder.class
 com\aurify\fixclient\admin\dto\EnsureSessionRequest.class
 com\aurify\fixclient\provider\AbstractQuickFixProviderAdapter.class
 com\aurify\fixclient\session\SessionRole.class
 com\aurify\fixclient\admin\OrderTestController$TestOrderRequest.class
+com\aurify\fixclient\provider\finalto\FinaltoIncomingMapper.class
 com\aurify\fixclient\provider\ValidationResult.class
 com\aurify\fixclient\session\DirectSessionControlService.class
 com\aurify\fixclient\transport\GatewayFixApplication.class

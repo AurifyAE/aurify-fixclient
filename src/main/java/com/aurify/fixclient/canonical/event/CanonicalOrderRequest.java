@@ -22,6 +22,9 @@ public class CanonicalOrderRequest implements CanonicalOutboundRequest {
     OrdType ordType;
     BigDecimal price;
     TimeInForce timeInForce;
+    /** NewOrderSingle PartyID (tag 448) - required by providers that mandate a
+     *  NoPartyIDs group (e.g. Finalto). Null/blank: the adapter omits the group. */
+    String partyId;
 
     public enum OrdType { MARKET, LIMIT }
     public enum TimeInForce { IOC, FOK, GTC, DAY }

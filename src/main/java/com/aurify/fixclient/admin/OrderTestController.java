@@ -40,7 +40,9 @@ public class OrderTestController {
             BigDecimal price,   // required if ordType=LIMIT
             String account,
             String ticketId,
-            String group
+            String group,
+            String timeInForce, // "IOC" | "FOK" | "GTC" | "DAY"; blank = IOC
+            String partyId
     ) {}
 
     @PostMapping
@@ -65,7 +67,8 @@ public class OrderTestController {
                 .ordType("LIMIT".equalsIgnoreCase(request.ordType())
                         ? CanonicalOrderRequest.OrdType.LIMIT : CanonicalOrderRequest.OrdType.MARKET)
                 .price(request.price())
-                .timeInForce(CanonicalOrderRequest.TimeInForce.IOC)
+                .timeInForce(resolveTimeInForce(request.timeInForce()))
+                .partyId(request.partyId())
                 .build();
 
         // No policy is available here - the spec lives with the caller, not the
@@ -76,5 +79,16 @@ public class OrderTestController {
         return accepted
                 ? ResponseEntity.ok("Order queued: " + order.getClOrdId())
                 : ResponseEntity.status(503).body("Queue full - order not accepted");
+    }
+
+    private CanonicalOrderRequest.TimeInForce resolveTimeInForce(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return CanonicalOrderRequest.TimeInForce.IOC;
+        }
+        try {
+            return CanonicalOrderRequest.TimeInForce.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CanonicalOrderRequest.TimeInForce.IOC;
+        }
     }
 }

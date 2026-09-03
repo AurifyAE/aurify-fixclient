@@ -22,7 +22,8 @@ public record EnsureSessionRequest(
         Double maxPositionPerSymbol,
         Double maxTotalExposure,
         String specFingerprint,
-        String account
+        String account,
+        String partyId
 ) {
 
     public record TradingSession(
@@ -73,7 +74,8 @@ public record EnsureSessionRequest(
                 specFingerprint == null || specFingerprint.isBlank()
                         ? derivedFingerprint(session)
                         : specFingerprint,
-                account);
+                account,
+                partyId);
     }
 
     private String derivedFingerprint(LpSessionSpec.FixSessionSpec session) {

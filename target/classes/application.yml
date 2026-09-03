@@ -33,7 +33,14 @@ fix-gateway:
   session:
     # Kept under the caller's RPC deadline so a slow logon surfaces as an error
     # rather than as a timeout with no explanation.
-    logon-timeout-seconds: 8
+    #
+    # 8s was too tight for a real venue: a first logon over TLS to an
+    # institutional LP routinely takes longer, and when this expires
+    # awaitLogon() tears the socket down - which shows up in the FIX event log
+    # as "Encountered END_OF_STREAM" and reads exactly like the LP rejecting
+    # us, when in fact we hung up on them first. Raise the caller's deadline
+    # (LP_HEDGE_GRPC_TIMEOUT_MS on the Node side) alongside this.
+    logon-timeout-seconds: ${FIX_LOGON_TIMEOUT_SECONDS:25}
     idle-timeout-minutes: 30
     reaper-interval-ms: 60000
     file-store-path: data/store

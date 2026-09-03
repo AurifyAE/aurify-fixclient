@@ -42,7 +42,8 @@ public final class LpSessionSpecMapper {
                 proto.getMaxPositionPerSymbol(),
                 proto.getMaxTotalExposure(),
                 fingerprint,
-                proto.getAccount());
+                proto.getAccount(),
+                proto.getPartyId());
     }
 
     private static LpSessionSpec.FixSessionSpec toDomain(FixSession proto) {

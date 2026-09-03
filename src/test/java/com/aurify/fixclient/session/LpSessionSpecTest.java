@@ -16,7 +16,7 @@ class LpSessionSpecTest {
 
     private static LpSessionSpec spec(Set<String> allowedSymbols) {
         return new LpSessionSpec("acct-1", "FXCubic", "FIX.4.3", session(),
-                allowedSymbols, 500L, 1000D, 5000D, "fp-1", "LP-ACC-1");
+                allowedSymbols, 500L, 1000D, 5000D, "fp-1", "LP-ACC-1", "");
     }
 
     @Test
@@ -65,7 +65,7 @@ class LpSessionSpecTest {
     @Test
     void tradingSessionIsMandatory() {
         assertThrows(NullPointerException.class, () -> new LpSessionSpec(
-                "acct-1", "fxcubic", "FIX.4.3", null, Set.of(), 0L, 0D, 0D, "fp", "LP-ACC-1"));
+                "acct-1", "fxcubic", "FIX.4.3", null, Set.of(), 0L, 0D, 0D, "fp", "LP-ACC-1", ""));
     }
 
     @Test
@@ -80,9 +80,20 @@ class LpSessionSpecTest {
     @Test
     void anUnsetLpAccountYieldsNullSoTagOneIsOmittedRatherThanWrong() {
         LpSessionSpec noAccount = new LpSessionSpec("acct-1", "fxcubic", "FIX.4.3", session(),
-                Set.of(), 0L, 0D, 0D, "fp-1", "  ");
+                Set.of(), 0L, 0D, 0D, "fp-1", "  ", "");
 
         assertNull(noAccount.accountOrNull());
+    }
+
+    @Test
+    void partyIdIsCarriedButOptional() {
+        LpSessionSpec withParty = new LpSessionSpec("acct-1", "finalto", "FIX.4.4", session(),
+                Set.of(), 0L, 0D, 0D, "fp-1", "LP-ACC-1", "PARTY-1");
+        assertEquals("PARTY-1", withParty.partyIdOrNull());
+
+        LpSessionSpec withoutParty = new LpSessionSpec("acct-1", "finalto", "FIX.4.4", session(),
+                Set.of(), 0L, 0D, 0D, "fp-1", "LP-ACC-1", "");
+        assertNull(withoutParty.partyIdOrNull());
     }
 
     @Test

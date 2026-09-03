@@ -148,4 +148,24 @@ public interface SubmitMarketOrderRequestOrBuilder extends
    * <code>.aurify.lphedge.v1.LpSessionSpec session = 12;</code>
    */
   aurify.lphedge.v1.LpSessionSpecOrBuilder getSessionOrBuilder();
+
+  /**
+   * <pre>
+   * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+   * </pre>
+   *
+   * <code>string time_in_force = 13;</code>
+   * @return The timeInForce.
+   */
+  java.lang.String getTimeInForce();
+  /**
+   * <pre>
+   * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+   * </pre>
+   *
+   * <code>string time_in_force = 13;</code>
+   * @return The bytes for timeInForce.
+   */
+  com.google.protobuf.ByteString
+      getTimeInForceBytes();
 }

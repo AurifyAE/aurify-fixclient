@@ -141,7 +141,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", port, "AURIFY_TR", "LP_TR",
                         "aurify", "s3cret", false, true, 30, "", "", ""),
-                Set.of(), 0L, 0D, 0D, "fp-other", "LP-ACC-2");
+                Set.of(), 0L, 0D, 0D, "fp-other", "LP-ACC-2", "");
 
         long start = System.currentTimeMillis();
         LpSessionException e = assertThrows(LpSessionException.class,
@@ -165,7 +165,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", freePort(), "AURIFY_TR", "LP_TR",
                         "u", "p", false, false, 30, "", "", ""),
-                Set.of(), 0L, 0D, 0D, "fp-down", "LP-ACC-1");
+                Set.of(), 0L, 0D, 0D, "fp-down", "LP-ACC-1", "");
 
         LpSessionException e = assertThrows(LpSessionException.class,
                 () -> manager.ensureSession(unreachable, SessionRole.TRADING));
@@ -183,7 +183,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", port, "AURIFY_TR", "LP_TR",
                         "aurify", "s3cret", false, true, 30, "", "", ""),
-                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1");
+                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "");
     }
 
     /** Stands in for the LP: accepts the connection and answers the Logon. */

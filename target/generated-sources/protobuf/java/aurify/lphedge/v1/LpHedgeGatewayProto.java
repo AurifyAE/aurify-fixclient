@@ -91,74 +91,75 @@ public final class LpHedgeGatewayProto {
       "word\030\006 \001(\t\022\017\n\007use_ssl\030\007 \001(\010\022\036\n\026reset_seq" +
       "_num_on_logon\030\010 \001(\010\022\"\n\032heartbeat_interva" +
       "l_seconds\030\t \001(\005\022\023\n\013server_name\030\n \001(\t\022\022\n\n" +
-      "start_time\030\013 \001(\t\022\020\n\010end_time\030\014 \001(\t\"\226\002\n\rL" +
+      "start_time\030\013 \001(\t\022\020\n\010end_time\030\014 \001(\t\"\250\002\n\rL" +
       "pSessionSpec\022\025\n\rlp_account_id\030\001 \001(\t\022\020\n\010p" +
       "rovider\030\002 \001(\t\022\023\n\013fix_version\030\003 \001(\t\022.\n\007tr" +
       "ading\030\004 \001(\0132\035.aurify.lphedge.v1.FixSessi" +
       "on\022\027\n\017allowed_symbols\030\005 \003(\t\022\026\n\016max_order" +
       "_size\030\006 \001(\003\022\037\n\027max_position_per_symbol\030\007" +
       " \001(\001\022\032\n\022max_total_exposure\030\010 \001(\001\022\030\n\020spec" +
-      "_fingerprint\030\t \001(\t\022\017\n\007account\030\n \001(\t\"\251\002\n\030" +
-      "SubmitMarketOrderRequest\022\027\n\017idempotency_" +
-      "key\030\001 \001(\t\022\020\n\010order_id\030\002 \001(\t\022\025\n\rlp_accoun" +
-      "t_id\030\003 \001(\t\022\016\n\006symbol\030\005 \001(\t\022\014\n\004side\030\006 \001(\t" +
-      "\022\020\n\010quantity\030\007 \001(\003\022\022\n\norder_type\030\010 \001(\t\022\027" +
-      "\n\017organization_id\030\t \001(\t\022\021\n\tbranch_id\030\n \001" +
-      "(\t\022\026\n\016correlation_id\030\013 \001(\t\0221\n\007session\030\014 " +
-      "\001(\0132 .aurify.lphedge.v1.LpSessionSpecJ\004\010" +
-      "\004\020\005R\nlp_api_key\"\210\002\n\031SubmitMarketOrderRes" +
-      "ponse\022\017\n\007success\030\001 \001(\010\022\021\n\tcl_ord_id\030\002 \001(" +
-      "\t\022\020\n\010order_id\030\003 \001(\t\022\016\n\006status\030\004 \001(\t\022\016\n\006a" +
-      "vg_px\030\005 \001(\001\022\017\n\007cum_qty\030\006 \001(\001\022\022\n\nleaves_q" +
-      "ty\030\007 \001(\001\022\020\n\010terminal\030\010 \001(\010\022\022\n\nerror_code" +
-      "\030\t \001(\t\022\025\n\rerror_message\030\n \001(\t\0223\n\007reports" +
-      "\030\013 \003(\0132\".aurify.lphedge.v1.ExecutionRepo" +
-      "rt\"\272\003\n\017ExecutionReport\022\025\n\rlp_account_id\030" +
-      "\001 \001(\t\022\020\n\010provider\030\002 \001(\t\022\021\n\tcl_ord_id\030\003 \001" +
-      "(\t\022\020\n\010order_id\030\004 \001(\t\022\017\n\007exec_id\030\005 \001(\t\022\021\n" +
-      "\texec_type\030\006 \001(\t\022\022\n\nord_status\030\007 \001(\t\022\016\n\006" +
-      "symbol\030\010 \001(\t\022\014\n\004side\030\t \001(\t\022\021\n\torder_qty\030" +
-      "\n \001(\001\022\r\n\005price\030\013 \001(\001\022\020\n\010last_qty\030\014 \001(\001\022\017" +
-      "\n\007last_px\030\r \001(\001\022\022\n\nleaves_qty\030\016 \001(\001\022\017\n\007c" +
-      "um_qty\030\017 \001(\001\022\016\n\006avg_px\030\020 \001(\001\022\023\n\013reject_t" +
-      "ext\030\021 \001(\t\022\026\n\016ord_rej_reason\030\022 \001(\005\022\033\n\023sec" +
-      "ondary_cl_ord_id\030\023 \001(\t\022\034\n\024occurred_at_ep" +
-      "och_ms\030\024 \001(\003\022\020\n\010terminal\030\025 \001(\010\022\017\n\007raw_fi" +
-      "x\030\026 \001(\t\"7\n\035StreamExecutionReportsRequest" +
-      "\022\026\n\016since_epoch_ms\030\001 \001(\003\".\n\031GetOrderExec" +
-      "utionsRequest\022\021\n\tcl_ord_id\030\001 \001(\t\"\215\001\n\032Get" +
-      "OrderExecutionsResponse\022\017\n\007success\030\001 \001(\010" +
-      "\0223\n\007reports\030\002 \003(\0132\".aurify.lphedge.v1.Ex" +
-      "ecutionReport\022\022\n\nerror_code\030\003 \001(\t\022\025\n\rerr" +
-      "or_message\030\004 \001(\t\"I\n\024EnsureSessionRequest" +
-      "\0221\n\007session\030\001 \001(\0132 .aurify.lphedge.v1.Lp" +
-      "SessionSpec\"-\n\024SessionStatusRequest\022\025\n\rl" +
-      "p_account_id\030\001 \001(\t\",\n\023CloseSessionReques" +
-      "t\022\025\n\rlp_account_id\030\001 \001(\t\"\345\001\n\025SessionStat" +
-      "usResponse\022\017\n\007success\030\001 \001(\010\022\025\n\rlp_accoun" +
-      "t_id\030\002 \001(\t\022\r\n\005state\030\003 \001(\t\022\022\n\nsession_id\030" +
-      "\004 \001(\t\022\030\n\020spec_fingerprint\030\005 \001(\t\022\035\n\025logge" +
-      "d_on_at_epoch_ms\030\006 \001(\003\022\035\n\025last_used_at_e" +
-      "poch_ms\030\007 \001(\003\022\022\n\nerror_code\030\010 \001(\t\022\025\n\rerr" +
-      "or_message\030\t \001(\t2\222\005\n\016LpHedgeGateway\022n\n\021S" +
-      "ubmitMarketOrder\022+.aurify.lphedge.v1.Sub" +
-      "mitMarketOrderRequest\032,.aurify.lphedge.v" +
-      "1.SubmitMarketOrderResponse\022b\n\rEnsureSes" +
-      "sion\022\'.aurify.lphedge.v1.EnsureSessionRe" +
-      "quest\032(.aurify.lphedge.v1.SessionStatusR" +
-      "esponse\022e\n\020GetSessionStatus\022\'.aurify.lph" +
-      "edge.v1.SessionStatusRequest\032(.aurify.lp" +
-      "hedge.v1.SessionStatusResponse\022`\n\014CloseS" +
-      "ession\022&.aurify.lphedge.v1.CloseSessionR" +
+      "_fingerprint\030\t \001(\t\022\017\n\007account\030\n \001(\t\022\020\n\010p" +
+      "arty_id\030\013 \001(\t\"\300\002\n\030SubmitMarketOrderReque" +
+      "st\022\027\n\017idempotency_key\030\001 \001(\t\022\020\n\010order_id\030" +
+      "\002 \001(\t\022\025\n\rlp_account_id\030\003 \001(\t\022\016\n\006symbol\030\005" +
+      " \001(\t\022\014\n\004side\030\006 \001(\t\022\020\n\010quantity\030\007 \001(\003\022\022\n\n" +
+      "order_type\030\010 \001(\t\022\027\n\017organization_id\030\t \001(" +
+      "\t\022\021\n\tbranch_id\030\n \001(\t\022\026\n\016correlation_id\030\013" +
+      " \001(\t\0221\n\007session\030\014 \001(\0132 .aurify.lphedge.v" +
+      "1.LpSessionSpec\022\025\n\rtime_in_force\030\r \001(\tJ\004" +
+      "\010\004\020\005R\nlp_api_key\"\210\002\n\031SubmitMarketOrderRe" +
+      "sponse\022\017\n\007success\030\001 \001(\010\022\021\n\tcl_ord_id\030\002 \001" +
+      "(\t\022\020\n\010order_id\030\003 \001(\t\022\016\n\006status\030\004 \001(\t\022\016\n\006" +
+      "avg_px\030\005 \001(\001\022\017\n\007cum_qty\030\006 \001(\001\022\022\n\nleaves_" +
+      "qty\030\007 \001(\001\022\020\n\010terminal\030\010 \001(\010\022\022\n\nerror_cod" +
+      "e\030\t \001(\t\022\025\n\rerror_message\030\n \001(\t\0223\n\007report" +
+      "s\030\013 \003(\0132\".aurify.lphedge.v1.ExecutionRep" +
+      "ort\"\272\003\n\017ExecutionReport\022\025\n\rlp_account_id" +
+      "\030\001 \001(\t\022\020\n\010provider\030\002 \001(\t\022\021\n\tcl_ord_id\030\003 " +
+      "\001(\t\022\020\n\010order_id\030\004 \001(\t\022\017\n\007exec_id\030\005 \001(\t\022\021" +
+      "\n\texec_type\030\006 \001(\t\022\022\n\nord_status\030\007 \001(\t\022\016\n" +
+      "\006symbol\030\010 \001(\t\022\014\n\004side\030\t \001(\t\022\021\n\torder_qty" +
+      "\030\n \001(\001\022\r\n\005price\030\013 \001(\001\022\020\n\010last_qty\030\014 \001(\001\022" +
+      "\017\n\007last_px\030\r \001(\001\022\022\n\nleaves_qty\030\016 \001(\001\022\017\n\007" +
+      "cum_qty\030\017 \001(\001\022\016\n\006avg_px\030\020 \001(\001\022\023\n\013reject_" +
+      "text\030\021 \001(\t\022\026\n\016ord_rej_reason\030\022 \001(\005\022\033\n\023se" +
+      "condary_cl_ord_id\030\023 \001(\t\022\034\n\024occurred_at_e" +
+      "poch_ms\030\024 \001(\003\022\020\n\010terminal\030\025 \001(\010\022\017\n\007raw_f" +
+      "ix\030\026 \001(\t\"7\n\035StreamExecutionReportsReques" +
+      "t\022\026\n\016since_epoch_ms\030\001 \001(\003\".\n\031GetOrderExe" +
+      "cutionsRequest\022\021\n\tcl_ord_id\030\001 \001(\t\"\215\001\n\032Ge" +
+      "tOrderExecutionsResponse\022\017\n\007success\030\001 \001(" +
+      "\010\0223\n\007reports\030\002 \003(\0132\".aurify.lphedge.v1.E" +
+      "xecutionReport\022\022\n\nerror_code\030\003 \001(\t\022\025\n\rer" +
+      "ror_message\030\004 \001(\t\"I\n\024EnsureSessionReques" +
+      "t\0221\n\007session\030\001 \001(\0132 .aurify.lphedge.v1.L" +
+      "pSessionSpec\"-\n\024SessionStatusRequest\022\025\n\r" +
+      "lp_account_id\030\001 \001(\t\",\n\023CloseSessionReque" +
+      "st\022\025\n\rlp_account_id\030\001 \001(\t\"\345\001\n\025SessionSta" +
+      "tusResponse\022\017\n\007success\030\001 \001(\010\022\025\n\rlp_accou" +
+      "nt_id\030\002 \001(\t\022\r\n\005state\030\003 \001(\t\022\022\n\nsession_id" +
+      "\030\004 \001(\t\022\030\n\020spec_fingerprint\030\005 \001(\t\022\035\n\025logg" +
+      "ed_on_at_epoch_ms\030\006 \001(\003\022\035\n\025last_used_at_" +
+      "epoch_ms\030\007 \001(\003\022\022\n\nerror_code\030\010 \001(\t\022\025\n\rer" +
+      "ror_message\030\t \001(\t2\222\005\n\016LpHedgeGateway\022n\n\021" +
+      "SubmitMarketOrder\022+.aurify.lphedge.v1.Su" +
+      "bmitMarketOrderRequest\032,.aurify.lphedge." +
+      "v1.SubmitMarketOrderResponse\022b\n\rEnsureSe" +
+      "ssion\022\'.aurify.lphedge.v1.EnsureSessionR" +
       "equest\032(.aurify.lphedge.v1.SessionStatus" +
-      "Response\022p\n\026StreamExecutionReports\0220.aur" +
-      "ify.lphedge.v1.StreamExecutionReportsReq" +
-      "uest\032\".aurify.lphedge.v1.ExecutionReport" +
-      "0\001\022q\n\022GetOrderExecutions\022,.aurify.lphedg" +
-      "e.v1.GetOrderExecutionsRequest\032-.aurify." +
-      "lphedge.v1.GetOrderExecutionsResponseB*\n" +
-      "\021aurify.lphedge.v1B\023LpHedgeGatewayProtoP" +
-      "\001b\006proto3"
+      "Response\022e\n\020GetSessionStatus\022\'.aurify.lp" +
+      "hedge.v1.SessionStatusRequest\032(.aurify.l" +
+      "phedge.v1.SessionStatusResponse\022`\n\014Close" +
+      "Session\022&.aurify.lphedge.v1.CloseSession" +
+      "Request\032(.aurify.lphedge.v1.SessionStatu" +
+      "sResponse\022p\n\026StreamExecutionReports\0220.au" +
+      "rify.lphedge.v1.StreamExecutionReportsRe" +
+      "quest\032\".aurify.lphedge.v1.ExecutionRepor" +
+      "t0\001\022q\n\022GetOrderExecutions\022,.aurify.lphed" +
+      "ge.v1.GetOrderExecutionsRequest\032-.aurify" +
+      ".lphedge.v1.GetOrderExecutionsResponseB*" +
+      "\n\021aurify.lphedge.v1B\023LpHedgeGatewayProto" +
+      "P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -175,13 +176,13 @@ public final class LpHedgeGatewayProto {
     internal_static_aurify_lphedge_v1_LpSessionSpec_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_LpSessionSpec_descriptor,
-        new java.lang.String[] { "LpAccountId", "Provider", "FixVersion", "Trading", "AllowedSymbols", "MaxOrderSize", "MaxPositionPerSymbol", "MaxTotalExposure", "SpecFingerprint", "Account", });
+        new java.lang.String[] { "LpAccountId", "Provider", "FixVersion", "Trading", "AllowedSymbols", "MaxOrderSize", "MaxPositionPerSymbol", "MaxTotalExposure", "SpecFingerprint", "Account", "PartyId", });
     internal_static_aurify_lphedge_v1_SubmitMarketOrderRequest_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_aurify_lphedge_v1_SubmitMarketOrderRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_aurify_lphedge_v1_SubmitMarketOrderRequest_descriptor,
-        new java.lang.String[] { "IdempotencyKey", "OrderId", "LpAccountId", "Symbol", "Side", "Quantity", "OrderType", "OrganizationId", "BranchId", "CorrelationId", "Session", });
+        new java.lang.String[] { "IdempotencyKey", "OrderId", "LpAccountId", "Symbol", "Side", "Quantity", "OrderType", "OrganizationId", "BranchId", "CorrelationId", "Session", "TimeInForce", });
     internal_static_aurify_lphedge_v1_SubmitMarketOrderResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_aurify_lphedge_v1_SubmitMarketOrderResponse_fieldAccessorTable = new

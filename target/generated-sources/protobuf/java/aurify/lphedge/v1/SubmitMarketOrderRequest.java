@@ -26,6 +26,7 @@ private static final long serialVersionUID = 0L;
     organizationId_ = "";
     branchId_ = "";
     correlationId_ = "";
+    timeInForce_ = "";
   }
 
   @java.lang.Override
@@ -449,6 +450,53 @@ private static final long serialVersionUID = 0L;
     return session_ == null ? aurify.lphedge.v1.LpSessionSpec.getDefaultInstance() : session_;
   }
 
+  public static final int TIME_IN_FORCE_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object timeInForce_ = "";
+  /**
+   * <pre>
+   * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+   * </pre>
+   *
+   * <code>string time_in_force = 13;</code>
+   * @return The timeInForce.
+   */
+  @java.lang.Override
+  public java.lang.String getTimeInForce() {
+    java.lang.Object ref = timeInForce_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      timeInForce_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+   * </pre>
+   *
+   * <code>string time_in_force = 13;</code>
+   * @return The bytes for timeInForce.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTimeInForceBytes() {
+    java.lang.Object ref = timeInForce_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      timeInForce_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -496,6 +544,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(12, getSession());
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(timeInForce_)) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 13, timeInForce_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -540,6 +591,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(12, getSession());
     }
+    if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(timeInForce_)) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(13, timeInForce_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -580,6 +634,8 @@ private static final long serialVersionUID = 0L;
       if (!getSession()
           .equals(other.getSession())) return false;
     }
+    if (!getTimeInForce()
+        .equals(other.getTimeInForce())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -616,6 +672,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + SESSION_FIELD_NUMBER;
       hash = (53 * hash) + getSession().hashCode();
     }
+    hash = (37 * hash) + TIME_IN_FORCE_FIELD_NUMBER;
+    hash = (53 * hash) + getTimeInForce().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -768,6 +826,7 @@ private static final long serialVersionUID = 0L;
         sessionBuilder_.dispose();
         sessionBuilder_ = null;
       }
+      timeInForce_ = "";
       return this;
     }
 
@@ -837,6 +896,9 @@ private static final long serialVersionUID = 0L;
             ? session_
             : sessionBuilder_.build();
         to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.timeInForce_ = timeInForce_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -936,6 +998,11 @@ private static final long serialVersionUID = 0L;
       if (other.hasSession()) {
         mergeSession(other.getSession());
       }
+      if (!other.getTimeInForce().isEmpty()) {
+        timeInForce_ = other.timeInForce_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1019,6 +1086,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000400;
               break;
             } // case 98
+            case 106: {
+              timeInForce_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1871,6 +1943,98 @@ private static final long serialVersionUID = 0L;
         session_ = null;
       }
       return sessionBuilder_;
+    }
+
+    private java.lang.Object timeInForce_ = "";
+    /**
+     * <pre>
+     * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+     * </pre>
+     *
+     * <code>string time_in_force = 13;</code>
+     * @return The timeInForce.
+     */
+    public java.lang.String getTimeInForce() {
+      java.lang.Object ref = timeInForce_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        timeInForce_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+     * </pre>
+     *
+     * <code>string time_in_force = 13;</code>
+     * @return The bytes for timeInForce.
+     */
+    public com.google.protobuf.ByteString
+        getTimeInForceBytes() {
+      java.lang.Object ref = timeInForce_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        timeInForce_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+     * </pre>
+     *
+     * <code>string time_in_force = 13;</code>
+     * @param value The timeInForce to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTimeInForce(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      timeInForce_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+     * </pre>
+     *
+     * <code>string time_in_force = 13;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTimeInForce() {
+      timeInForce_ = getDefaultInstance().getTimeInForce();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * IOC | FOK | GTC | DAY; empty = provider default (IOC)
+     * </pre>
+     *
+     * <code>string time_in_force = 13;</code>
+     * @param value The bytes for timeInForce to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTimeInForceBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      timeInForce_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
     }
     @java.lang.Override
     public final Builder setUnknownFields(
