@@ -35,6 +35,13 @@ class FinaltoIncomingMapperTest {
         return report;
     }
 
+    private CanonicalExecutionReport mapped(char execType, char ordStatus, String cumQty, String leavesQty)
+            throws Exception {
+        CanonicalEvent event = mapper.map(report(execType, ordStatus, cumQty, leavesQty), SESSION);
+        assertInstanceOf(CanonicalExecutionReport.class, event);
+        return (CanonicalExecutionReport) event;
+    }
+
     @Test
     void pendingNewThenFilledBothMapCleanly() throws Exception {
         CanonicalEvent pendingEvent = mapper.map(
@@ -51,6 +58,41 @@ class FinaltoIncomingMapperTest {
         assertEquals(CanonicalOrdStatus.FILLED, filled.getOrdStatus());
         assertEquals("CL-1", filled.getClOrdId());
         assertEquals("EURUSD", filled.getSymbol());
+    }
+
+    /**
+     * The fill Finalto actually sends. Spec p.19 lists F (Trade) and never 2,
+     * so copying FXCubic's switch - which maps only 2 - left every real fill
+     * as UNKNOWN.
+     */
+    @Test
+    void execTypeTradeIsTheFillFinaltoActuallySends() throws Exception {
+        CanonicalExecutionReport filled = mapped(ExecType.TRADE, OrdStatus.FILLED, "1000", "0");
+        assertEquals(CanonicalExecType.FILL, filled.getExecType());
+        assertEquals(CanonicalOrdStatus.FILLED, filled.getOrdStatus());
+    }
+
+    /** IOC's normal outcome on a thin market: some filled, the rest still open. */
+    @Test
+    void partialFillMapsToPartiallyFilledRatherThanUnknown() throws Exception {
+        CanonicalExecutionReport partial = mapped(ExecType.TRADE, OrdStatus.PARTIALLY_FILLED, "400", "600");
+        assertEquals(CanonicalExecType.FILL, partial.getExecType());
+        assertEquals(CanonicalOrdStatus.PARTIALLY_FILLED, partial.getOrdStatus());
+    }
+
+    /** The report that closes an IOC order after a partial fill. */
+    @Test
+    void cancelledMapsToCancelledSoThePendingCallCanAnswer() throws Exception {
+        CanonicalExecutionReport cancelled = mapped(ExecType.CANCELED, OrdStatus.CANCELED, "400", "0");
+        assertEquals(CanonicalExecType.CANCELLED, cancelled.getExecType());
+        assertEquals(CanonicalOrdStatus.CANCELLED, cancelled.getOrdStatus());
+    }
+
+    /** In-flight states carry no outcome, so they must NOT look terminal. */
+    @Test
+    void pendingCancelStaysUnknownRatherThanLookingLikeAnOutcome() throws Exception {
+        assertEquals(CanonicalOrdStatus.UNKNOWN,
+                mapped(ExecType.PENDING_CANCEL, OrdStatus.PENDING_CANCEL, "0", "1000").getOrdStatus());
     }
 
     @Test

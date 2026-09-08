@@ -8,6 +8,8 @@ import quickfix.Message;
 import quickfix.field.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,4 +100,25 @@ class FxCubicOutgoingBuilderTest {
         }
         return count;
     }
+
+    /**
+     * Regression: TransactTime (60) must be UTC.
+     *
+     * It was built with {@code LocalDateTime.now()}, which reads the JVM's
+     * default zone, so from an IST host the tag went out 5h30m ahead of the
+     * SendingTime QuickFIX had just stamped, and Finalto rejected every order
+     * with "Invalid TransactTime". FXCubic does not validate the tag, so this
+     * builder shipped the same defect unnoticed.
+     */
+    @Test
+    void transactTimeIsUtcNotTheHostsLocalZone() throws Exception {
+        LocalDateTime before = LocalDateTime.now(ZoneOffset.UTC);
+        Message nos = builder.build(order().build(), policy, null);
+        LocalDateTime after = LocalDateTime.now(ZoneOffset.UTC);
+
+        LocalDateTime sent = nos.getUtcTimeStamp(TransactTime.FIELD);
+        assertFalse(sent.isBefore(before.minusSeconds(1)), "TransactTime " + sent + " is behind UTC now");
+        assertFalse(sent.isAfter(after.plusSeconds(1)), "TransactTime " + sent + " is ahead of UTC now");
+    }
+
 }

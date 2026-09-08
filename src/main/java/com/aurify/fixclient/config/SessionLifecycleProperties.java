@@ -20,6 +20,20 @@ public class SessionLifecycleProperties {
      */
     private int logonTimeoutSeconds = 25;
 
+    /**
+     * How many times to offer the Logon before giving up, sharing the budget
+     * above rather than adding to it - two attempts of 12s, not two of 25s -
+     * so the caller's deadline arithmetic is unchanged.
+     *
+     * A venue can drop a connection with no FIX-level answer at all: Finalto's
+     * demo does it to roughly every other connect for a comp ID pair that
+     * recently logged out, and the Logon we send is byte-identical on the
+     * attempt that fails and the one that succeeds. A logon that is going to
+     * succeed does so in about a second, so a failed attempt is dead time, not
+     * a slow one. Set to 1 to restore single-shot behaviour.
+     */
+    private int logonAttempts = 2;
+
     /** Sessions unused for this long are logged out. Zero disables reaping. */
     private int idleTimeoutMinutes = 30;
 

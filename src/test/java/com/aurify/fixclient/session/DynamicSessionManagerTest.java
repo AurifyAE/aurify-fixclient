@@ -27,6 +27,7 @@ class DynamicSessionManagerTest {
 
     private int port;
     private SocketAcceptor acceptor;
+    private SessionLifecycleProperties lifecycle;
     private SocketInitiator initiator;
     private SessionSettings initiatorSettings;
     private DynamicSessionManager manager;
@@ -175,6 +176,77 @@ class DynamicSessionManagerTest {
                 "a failed session must be torn down, not left behind");
     }
 
+    /**
+     * A venue that drops a connection without a FIX-level answer - Finalto's
+     * demo does it to roughly every other reconnect - used to fail the whole
+     * hedge, and upstream that rolls back the metal transaction. One rebuild
+     * and retry recovers it.
+     *
+     * The LP here is absent for the first attempt and present for the second.
+     */
+    @Test
+    void aLogonThatGetsNoAnswerIsRetriedOnAFreshSession() throws Exception {
+        int latePort = freePort();
+        lifecycle.setLogonTimeoutSeconds(10);   // 5s per attempt
+        lifecycle.setLogonAttempts(2);
+
+        // Comes up during attempt 1, whose dial has already failed, so it is
+        // attempt 2's brand new session that finds it listening.
+        SocketAcceptor lateAcceptor = buildAcceptor(latePort);
+        Thread starter = new Thread(() -> {
+            try {
+                Thread.sleep(3_000L);
+                lateAcceptor.start();
+            } catch (Exception ignored) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        starter.start();
+
+        try {
+            LpSessionEntry entry = manager.ensureSession(specOn(latePort, "acct-late", "fp-late"), SessionRole.TRADING);
+            assertEquals(SessionState.LOGGED_ON, entry.state(), "the retry should have logged on");
+            assertEquals(1, acceptorLogons.get(), "only the successful attempt reaches the LP");
+        } finally {
+            starter.join(15_000L);
+            lateAcceptor.stop(true);
+        }
+    }
+
+    /**
+     * The attempts divide {@code logonTimeoutSeconds}; they do not each get it.
+     * Giving each attempt the full timeout would silently double the worst case
+     * and push it past the caller's RPC deadline, which is the thing this
+     * budget exists to stay inside.
+     */
+    @Test
+    void retryingSharesTheLogonBudgetInsteadOfDoublingIt() {
+        lifecycle.setLogonTimeoutSeconds(6);
+        lifecycle.setLogonAttempts(2);
+
+        long startedAt = System.currentTimeMillis();
+        LpSessionException e = assertThrows(LpSessionException.class,
+                () -> manager.ensureSession(specOn(freePort(), "acct-dead", "fp-dead"), SessionRole.TRADING));
+        long elapsed = System.currentTimeMillis() - startedAt;
+
+        assertEquals("LP_SESSION_LOGON_TIMEOUT", e.getCode());
+        assertTrue(elapsed < 11_000L, "two attempts must share the 6s budget, took " + elapsed + "ms");
+        assertTrue(registry.find("acct-dead", SessionRole.TRADING).isEmpty(),
+                "every attempt must be torn down, not left behind");
+    }
+
+    @Test
+    void oneAttemptRestoresTheOldSingleShotBehaviour() {
+        lifecycle.setLogonTimeoutSeconds(4);
+        lifecycle.setLogonAttempts(1);
+
+        LpSessionException e = assertThrows(LpSessionException.class,
+                () -> manager.ensureSession(specOn(freePort(), "acct-once", "fp-once"), SessionRole.TRADING));
+
+        assertEquals("LP_SESSION_LOGON_TIMEOUT", e.getCode());
+        assertTrue(registry.find("acct-once", SessionRole.TRADING).isEmpty());
+    }
+
     // --- fixtures -----------------------------------------------------------
 
     private LpSessionSpec spec(String fingerprint) {
@@ -186,27 +258,41 @@ class DynamicSessionManagerTest {
                 Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "");
     }
 
+    /** The same spec against an arbitrary port and account. */
+    private LpSessionSpec specOn(int targetPort, String lpAccountId, String fingerprint) {
+        return new LpSessionSpec(
+                lpAccountId, "fxcubic", "FIX.4.3",
+                new LpSessionSpec.FixSessionSpec(
+                        "127.0.0.1", targetPort, "AURIFY_TR", "LP_TR",
+                        "aurify", "s3cret", false, true, 30, "", "", ""),
+                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "");
+    }
+
     /** Stands in for the LP: accepts the connection and answers the Logon. */
     private void startAcceptor() throws ConfigError {
+        acceptor = buildAcceptor(port);
+        acceptor.start();
+    }
+
+    private SocketAcceptor buildAcceptor(int acceptPort) throws ConfigError {
         SessionSettings settings = new SessionSettings();
         settings.setString("ConnectionType", "acceptor");
         settings.setBool("UseDataDictionary", true);
 
         SessionID sessionId = new SessionID("FIX.4.3", "LP_TR", "AURIFY_TR");
-        settings.setLong(sessionId, "SocketAcceptPort", port);
+        settings.setLong(sessionId, "SocketAcceptPort", acceptPort);
         settings.setString(sessionId, "StartTime", "00:00:00");
         settings.setString(sessionId, "EndTime", "23:59:59");
         settings.setString(sessionId, "DataDictionary", "FIX43.xml");
         settings.setBool(sessionId, "ResetOnLogon", true);
 
-        acceptor = new SocketAcceptor(
+        return new SocketAcceptor(
                 new NoOpApplication(acceptorLogons::incrementAndGet),
                 new MemoryStoreFactory(), settings, new DefaultMessageFactory());
-        acceptor.start();
     }
 
     private void startInitiatorSide() throws ConfigError {
-        SessionLifecycleProperties lifecycle = new SessionLifecycleProperties();
+        lifecycle = new SessionLifecycleProperties();
         lifecycle.setLogonTimeoutSeconds(8);
         lifecycle.setIdleTimeoutMinutes(0); // no reaping during the test
 

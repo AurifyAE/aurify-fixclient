@@ -11,6 +11,7 @@ import quickfix.field.*;
 import quickfix.fix44.NewOrderSingle;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * Builds outbound Finalto (CFH) FIX 4.4 messages from canonical requests, per
@@ -48,7 +49,7 @@ public class FinaltoOutgoingBuilder {
         NewOrderSingle nos = new NewOrderSingle(
                 new ClOrdID(sanitizeClOrdId(order.getClOrdId())),
                 order.getSide() == CanonicalSide.BUY ? new Side(Side.BUY) : new Side(Side.SELL),
-                new TransactTime(LocalDateTime.now()),
+                new TransactTime(utcNow()),
                 order.getOrdType() == CanonicalOrderRequest.OrdType.LIMIT
                         ? new OrdType(OrdType.LIMIT) : new OrdType(OrdType.MARKET)
         );
@@ -94,4 +95,18 @@ public class FinaltoOutgoingBuilder {
         String cleaned = clOrdId.replaceAll("[<>\"'%;()&]", "");
         return cleaned.length() > 50 ? cleaned.substring(0, 50) : cleaned;
     }
+
+    /**
+     * TransactTime (60) must be UTC, like every other FIX timestamp.
+     *
+     * {@code LocalDateTime.now()} reads the JVM's default zone, so on a host
+     * that is not on UTC the tag goes out shifted - from IST it arrives 5h30m
+     * in the future while QuickFIX's own SendingTime (52) is correct, and
+     * Finalto rejects the order with "Invalid TransactTime". FXCubic does not
+     * validate it, which is why this survived until a second venue was added.
+     */
+    private static LocalDateTime utcNow() {
+        return LocalDateTime.now(ZoneOffset.UTC);
+    }
+
 }

@@ -29,6 +29,13 @@ fix-gateway:
       private-key-path: ${LP_HEDGE_GRPC_TLS_KEY:}
       trust-cert-collection-path: ${LP_HEDGE_GRPC_TLS_CA:}
       require-client-auth: true
+    # Shared secret the caller sends as "authorization: Bearer <token>". It must
+    # match LP_HEDGE_GRPC_AUTH_TOKEN on the Node side. Blank disables the check
+    # and the gateway warns at startup; set required=true in any deployment that
+    # is not loopback, so a missing token fails the boot instead of the audit.
+    auth:
+      token: ${LP_HEDGE_GRPC_AUTH_TOKEN:}
+      required: ${LP_HEDGE_GRPC_AUTH_REQUIRED:false}
 
   session:
     # Kept under the caller's RPC deadline so a slow logon surfaces as an error
@@ -41,6 +48,12 @@ fix-gateway:
     # us, when in fact we hung up on them first. Raise the caller's deadline
     # (LP_HEDGE_GRPC_TIMEOUT_MS on the Node side) alongside this.
     logon-timeout-seconds: ${FIX_LOGON_TIMEOUT_SECONDS:25}
+    # Attempts share the budget above rather than each getting it, so the worst
+    # case is unchanged. A venue can drop a connection with no FIX-level answer
+    # (Finalto's demo does it to about every other reconnect), and a logon that
+    # will succeed takes about a second - so a lost attempt costs dead time, not
+    # a slow one. 1 restores single-shot behaviour.
+    logon-attempts: ${FIX_LOGON_ATTEMPTS:2}
     idle-timeout-minutes: 30
     reaper-interval-ms: 60000
     file-store-path: data/store

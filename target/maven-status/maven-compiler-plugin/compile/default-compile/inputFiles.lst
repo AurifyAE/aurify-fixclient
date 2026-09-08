@@ -28,6 +28,7 @@ D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\even
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\SessionConnectedEvent.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\events\SessionDisconnectedEvent.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\FixGatewayApplication.java
+D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\AuthTokenServerInterceptor.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\ExecutionReportMapper.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\GrpcGatewayProperties.java
 D:\Aurify\CRMBULLIONPRO\aurify-fixclient\src\main\java\com\aurify\fixclient\grpc\GrpcServerLifecycle.java

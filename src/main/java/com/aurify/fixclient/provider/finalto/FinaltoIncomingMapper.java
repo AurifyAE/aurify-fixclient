@@ -121,21 +121,46 @@ public class FinaltoIncomingMapper {
                 .build();
     }
 
+    /**
+     * ExecType per the Finalto spec (p.19), which is NOT FXCubic's list.
+     *
+     * A Finalto fill arrives as {@code F} (Trade) - the FIX 4.4 spelling - and
+     * the spec does not list {@code 2} (Fill) at all, so mapping only 2 the way
+     * {@code FxCubicIncomingMapper} does leaves every real fill UNKNOWN.
+     * {@code 2} is kept anyway: tolerating the older spelling costs nothing.
+     * {@code I} (Order status), {@code 5}/{@code 6}/{@code E} are deliberately
+     * unmapped - they carry no execution and must stay non-terminal.
+     */
     private CanonicalExecType mapExecType(char execType) {
         return switch (execType) {
             case ExecType.NEW -> CanonicalExecType.NEW;
             case ExecType.PENDING_NEW -> CanonicalExecType.PENDING_NEW;
-            case ExecType.FILL -> CanonicalExecType.FILL;
+            case ExecType.TRADE, ExecType.FILL -> CanonicalExecType.FILL;
+            case ExecType.CANCELED -> CanonicalExecType.CANCELLED;
             case ExecType.REJECTED -> CanonicalExecType.REJECTED;
             default -> CanonicalExecType.UNKNOWN;
         };
     }
 
+    /**
+     * OrdStatus per the Finalto spec (p.19). This switch decides whether a
+     * pending hedge call can answer: {@code PendingOrderRegistry.isTerminal}
+     * completes on FILLED/REJECTED/CANCELLED and waits on everything else.
+     *
+     * Finalto's default TimeInForce here is IOC, whose normal outcome on a thin
+     * market is a partial fill ({@code 1}) followed by a cancel of the
+     * remainder ({@code 4}). Leaving either UNKNOWN means the venue answers,
+     * the hedge is real, and the caller still times out - so both are mapped.
+     * {@code 6} (Pending Cancel) and {@code E} (Pending Replace) stay unmapped
+     * on purpose: they are in-flight states, not outcomes.
+     */
     private CanonicalOrdStatus mapOrdStatus(char ordStatus) {
         return switch (ordStatus) {
             case OrdStatus.NEW -> CanonicalOrdStatus.NEW;
             case OrdStatus.PENDING_NEW -> CanonicalOrdStatus.PENDING_NEW;
+            case OrdStatus.PARTIALLY_FILLED -> CanonicalOrdStatus.PARTIALLY_FILLED;
             case OrdStatus.FILLED -> CanonicalOrdStatus.FILLED;
+            case OrdStatus.CANCELED -> CanonicalOrdStatus.CANCELLED;
             case OrdStatus.REJECTED -> CanonicalOrdStatus.REJECTED;
             default -> CanonicalOrdStatus.UNKNOWN;
         };

@@ -47,6 +47,7 @@ com\aurify\fixclient\canonical\event\CanonicalReject$CanonicalRejectBuilder.clas
 com\aurify\fixclient\pipeline\InboundProcessingPipeline.class
 com\aurify\fixclient\transport\GatewayMessageCracker$IncomingMapperFn.class
 com\aurify\fixclient\grpc\PendingOrderRegistry.class
+com\aurify\fixclient\grpc\AuthTokenServerInterceptor$1.class
 aurify\lphedge\v1\ExecutionReport$Builder.class
 aurify\lphedge\v1\SubmitMarketOrderResponse$1.class
 com\aurify\fixclient\canonical\event\CanonicalOrderRequest$CanonicalOrderRequestBuilder.class
@@ -84,6 +85,7 @@ aurify\lphedge\v1\LpHedgeGatewayGrpc$3.class
 com\aurify\fixclient\canonical\event\CanonicalReject.class
 com\aurify\fixclient\events\ProviderHealthChangedEvent.class
 com\aurify\fixclient\canonical\event\CanonicalOrderRequest$OrdType.class
+com\aurify\fixclient\grpc\AuthTokenServerInterceptor.class
 com\aurify\fixclient\config\ExecutionJournalProperties.class
 com\aurify\fixclient\config\ProviderProperties$Persistence.class
 com\aurify\fixclient\canonical\event\CanonicalExecutionReport.class
@@ -121,6 +123,7 @@ aurify\lphedge\v1\GetOrderExecutionsRequest$1.class
 com\aurify\fixclient\session\SessionStatusSnapshot.class
 com\aurify\fixclient\transport\GatewayMessageCracker.class
 com\aurify\fixclient\persistence\InMemoryPersistenceAdapter.class
+com\aurify\fixclient\grpc\GrpcGatewayProperties$Auth.class
 com\aurify\fixclient\provider\ProviderCapabilities.class
 com\aurify\fixclient\journal\ExecutionJournal.class
 aurify\lphedge\v1\LpHedgeGatewayGrpc$AsyncService.class

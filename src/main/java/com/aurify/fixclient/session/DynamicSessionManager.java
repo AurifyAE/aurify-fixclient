@@ -68,9 +68,45 @@ public class DynamicSessionManager {
                 }
             }
 
-            LpSessionEntry entry = existing != null ? existing : create(spec, role);
-            awaitLogon(entry);
-            return entry;
+            return awaitLogonWithRetry(spec, role,
+                    existing != null ? existing : create(spec, role));
+        }
+    }
+
+    /**
+     * Waits for the Logon, rebuilding the session and trying again if the LP
+     * never answers.
+     *
+     * The attempts share {@code logonTimeoutSeconds} instead of each getting
+     * it, so the worst case is what it always was and the caller's deadline
+     * still holds. Retrying is worth it because a venue can drop a connection
+     * with no FIX-level reply - Finalto's demo does it to roughly every other
+     * connect for a comp ID pair that recently logged out - and a logon that
+     * will succeed does so in about a second, so the wait is dead time rather
+     * than slowness. The session is torn down between attempts: QuickFIX will
+     * not log on again on a SessionID whose reconnect task is still dialling.
+     */
+    private LpSessionEntry awaitLogonWithRetry(LpSessionSpec spec, SessionRole role, LpSessionEntry first) {
+        int attempts = Math.max(1, lifecycleProperties.getLogonAttempts());
+        long totalMs = Math.max(1L, lifecycleProperties.getLogonTimeoutSeconds()) * 1000L;
+        long perAttemptMs = Math.max(1_000L, totalMs / attempts);
+
+        LpSessionEntry entry = first;
+        for (int attempt = 1; ; attempt++) {
+            if (awaitLogon(entry, perAttemptMs)) {
+                return entry;
+            }
+            entry.markFailed();
+            teardown(entry);
+
+            if (attempt >= attempts) {
+                throw LpSessionException.logonTimeout(
+                        entry.lpAccountId(), lifecycleProperties.getLogonTimeoutSeconds());
+            }
+            log.warn("Logon attempt {} of {} for LP account {} [{}] got no response in {}ms - "
+                            + "rebuilding the session and trying again",
+                    attempt, attempts, spec.lpAccountId(), role, perAttemptMs);
+            entry = create(spec, role);
         }
     }
 
@@ -134,28 +170,28 @@ public class DynamicSessionManager {
         return entry;
     }
 
-    private void awaitLogon(LpSessionEntry entry) {
-        long timeoutSeconds = lifecycleProperties.getLogonTimeoutSeconds();
-        long deadline = System.currentTimeMillis() + timeoutSeconds * 1000L;
+    /** True once the session is logged on; false if it did not happen in time.
+     *  Leaves the session alone either way - the caller decides whether to
+     *  retry or give up, and both need it torn down differently. */
+    private boolean awaitLogon(LpSessionEntry entry, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
 
         while (System.currentTimeMillis() < deadline) {
             if (isLoggedOn(entry.sessionId())) {
                 entry.markLoggedOn();
-                return;
+                return true;
             }
             try {
                 Thread.sleep(LOGON_POLL_INTERVAL_MS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 entry.markFailed();
+                teardown(entry);
                 throw new LpSessionException("LP_SESSION_INTERRUPTED",
                         "Interrupted while waiting for logon to " + entry.lpAccountId());
             }
         }
-
-        entry.markFailed();
-        teardown(entry);
-        throw LpSessionException.logonTimeout(entry.lpAccountId(), timeoutSeconds);
+        return false;
     }
 
     private boolean isLoggedOn(SessionID sessionId) {

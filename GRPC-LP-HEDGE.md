@@ -34,7 +34,11 @@ LP credentials arrive per request inside `LpSessionSpec` and are injected into
 the FIX Logon only — never into an application message, and never logged. The
 `lp_api_key` field is removed from the proto (its field number is reserved).
 Because this channel carries live venue passwords, authenticate the Node caller
-with mTLS anywhere but loopback.
+with mTLS anywhere but loopback, and set the shared secret on both sides:
+`LP_HEDGE_GRPC_AUTH_TOKEN` on Node becomes the `authorization: Bearer <token>`
+metadata on every request, and `fix-gateway.grpc.auth.token` is what the gateway
+checks it against. A mismatch fails the call with `UNAUTHENTICATED`, which the
+Node client surfaces as an error rather than retrying — unlike `UNAVAILABLE`.
 
 ## Start
 
@@ -73,6 +77,9 @@ schema receives the camel-case request object your Node code already sends.
 
 The in-memory correlation/idempotency registry is intentionally process-local.
 Before running more than one gateway instance, replace it with durable shared
-storage and ensure the FIX `ClOrdID` is globally unique. Also add gRPC mTLS (or
-an authentication interceptor), authorization by account, and audit-safe secret
-handling.
+storage and ensure the FIX `ClOrdID` is globally unique.
+
+Transport security and caller authentication are in place (mTLS plus the shared
+secret above); what is still missing is **authorization by account** — any
+authenticated caller may trade any `lp_account_id` it supplies a spec for — and
+audit-safe secret handling.
