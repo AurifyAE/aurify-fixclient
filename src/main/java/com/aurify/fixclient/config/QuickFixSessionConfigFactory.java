@@ -60,7 +60,11 @@ public class QuickFixSessionConfigFactory {
         settings.setLong(sessionId, "SocketConnectPort", session.port());
         settings.setLong(sessionId, "HeartBtInt", session.heartbeatIntervalSeconds());
         settings.setBool(sessionId, "ResetOnLogon", session.resetSeqNumOnLogon());
-        settings.setBool(sessionId, "PersistMessages", true);
+        // A pricing session is high-frequency market data, not orders - there
+        // is nothing worth replaying after a disconnect, and persisting every
+        // tick to the file store is pure overhead. Trading sessions keep
+        // PersistMessages=true so a missed execution report can be resent.
+        settings.setBool(sessionId, "PersistMessages", role != SessionRole.PRICING);
         settings.setString(sessionId, "StartTime", session.startTime());
         settings.setString(sessionId, "EndTime", session.endTime());
         settings.setString(sessionId, "DataDictionary", dataDictionaryFor(spec));
@@ -77,21 +81,27 @@ public class QuickFixSessionConfigFactory {
         settings.setLong(sessionId, Session.SETTING_LOGON_TIMEOUT,
                 Math.max(1, lifecycleProperties.getLogonTimeoutSeconds() - 1));
 
-        if (session.useSsl()) {
-            settings.setString(sessionId, SSLSupport.SETTING_USE_SSL, "Y");
-            if (session.serverName() != null && !session.serverName().isBlank()) {
-                settings.setString(sessionId, SSLSupport.SETTING_USE_SNI, "Y");
-            }
-        }
+        // Written on every path, never conditionally. SessionSettings is a
+        // shared long-lived bean keyed by SessionID, so a value left behind by
+        // an earlier spec for the same session survives: only ever setting "Y"
+        // means SSL can be turned on for an LP but never back off, and the
+        // symptom is a session that keeps failing its TLS handshake against a
+        // plaintext port while the stored config plainly says useSsl=false.
+        boolean useSni = session.useSsl()
+                && session.serverName() != null
+                && !session.serverName().isBlank();
+        settings.setString(sessionId, SSLSupport.SETTING_USE_SSL, session.useSsl() ? "Y" : "N");
+        settings.setString(sessionId, SSLSupport.SETTING_USE_SNI, useSni ? "Y" : "N");
     }
 
     /** The session of a given role, or a clear error if the caller omitted it. */
     public static LpSessionSpec.FixSessionSpec sessionOf(LpSessionSpec spec, SessionRole role) {
-        if (role == SessionRole.TRADING) {
-            return spec.trading();
+        LpSessionSpec.FixSessionSpec session = spec.sessionFor(role);
+        if (session == null) {
+            throw new IllegalArgumentException(
+                    "No " + role + " session configured for LP account " + spec.lpAccountId());
         }
-        throw new IllegalArgumentException(
-                "No " + role + " session configured for LP account " + spec.lpAccountId());
+        return session;
     }
 
     /**

@@ -5,6 +5,7 @@ import com.aurify.fixclient.canonical.enums.CanonicalOrdStatus;
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalEvent;
 import com.aurify.fixclient.canonical.event.CanonicalExecutionReport;
+import com.aurify.fixclient.canonical.event.CanonicalQuote;
 import com.aurify.fixclient.canonical.event.CanonicalReject;
 import org.springframework.stereotype.Component;
 import quickfix.FieldNotFound;
@@ -13,7 +14,9 @@ import quickfix.SessionID;
 import quickfix.field.*;
 import quickfix.fix44.BusinessMessageReject;
 import quickfix.fix44.ExecutionReport;
+import quickfix.fix44.MarketDataIncrementalRefresh;
 import quickfix.fix44.MarketDataRequestReject;
+import quickfix.fix44.MarketDataSnapshotFullRefresh;
 import quickfix.fix44.OrderCancelReject;
 import quickfix.fix44.Reject;
 
@@ -47,6 +50,12 @@ public class FinaltoIncomingMapper {
         }
         if (message instanceof MarketDataRequestReject reject) {
             return mapMarketDataReject(reject);
+        }
+        if (message instanceof MarketDataSnapshotFullRefresh snapshot) {
+            return mapMarketDataSnapshot(snapshot);
+        }
+        if (message instanceof MarketDataIncrementalRefresh incremental) {
+            return mapMarketDataIncremental(incremental);
         }
         throw new IllegalArgumentException("Unhandled Finalto message type: " + message.getClass());
     }
@@ -117,6 +126,70 @@ public class FinaltoIncomingMapper {
                 .refId(reject.getMDReqID().getValue())
                 .reasonCode(reject.isSetMDReqRejReason() ? String.valueOf(reject.getMDReqRejReason().getValue()) : null)
                 .text(reject.isSetText() ? reject.getText().getValue() : null)
+                .occurredAt(Instant.now())
+                .build();
+    }
+
+    /**
+     * 35=W. Structurally identical to FXCubic's (stock FIX44 group), but
+     * UNVERIFIED against the Finalto (CFH) FIX API v2.6 spec - no Finalto spec
+     * document is checked into this repo. Confirm against it before relying on
+     * this in production: whether Finalto answers a subscription with 35=W,
+     * 35=X, or both, and its MarketDepth/SubscriptionRequestType requirements.
+     */
+    private CanonicalQuote mapMarketDataSnapshot(MarketDataSnapshotFullRefresh snapshot) throws FieldNotFound {
+        String symbol = snapshot.isSetSymbol() ? snapshot.getSymbol().getValue() : null;
+        BigDecimal bid = null, bidSize = null, ask = null, askSize = null;
+        int count = snapshot.getNoMDEntries().getValue();
+        for (int i = 1; i <= count; i++) {
+            MarketDataSnapshotFullRefresh.NoMDEntries entry = new MarketDataSnapshotFullRefresh.NoMDEntries();
+            snapshot.getGroup(i, entry);
+            BigDecimal px = entry.isSetMDEntryPx() ? BigDecimal.valueOf(entry.getMDEntryPx().getValue()) : null;
+            BigDecimal size = entry.isSetMDEntrySize() ? BigDecimal.valueOf(entry.getMDEntrySize().getValue()) : null;
+            if (entry.getMDEntryType().getValue() == MDEntryType.BID) {
+                bid = px; bidSize = size;
+            } else if (entry.getMDEntryType().getValue() == MDEntryType.OFFER) {
+                ask = px; askSize = size;
+            }
+        }
+
+        return CanonicalQuote.builder()
+                .provider(FinaltoProviderAdapter.PROVIDER_NAME)
+                .symbol(symbol)
+                .bid(bid).bidSize(bidSize).ask(ask).askSize(askSize)
+                .quoteId(snapshot.isSetMDReqID() ? snapshot.getMDReqID().getValue() : null)
+                .occurredAt(Instant.now())
+                .build();
+    }
+
+    /** 35=X. See {@link #mapMarketDataSnapshot} - same unverified caveat. A
+     *  DELETE(2) entry is skipped: it carries no usable price. */
+    private CanonicalQuote mapMarketDataIncremental(MarketDataIncrementalRefresh incremental) throws FieldNotFound {
+        String symbol = null;
+        BigDecimal bid = null, bidSize = null, ask = null, askSize = null;
+        int count = incremental.getNoMDEntries().getValue();
+        for (int i = 1; i <= count; i++) {
+            MarketDataIncrementalRefresh.NoMDEntries entry = new MarketDataIncrementalRefresh.NoMDEntries();
+            incremental.getGroup(i, entry);
+            if (entry.isSetMDUpdateAction() && entry.getMDUpdateAction().getValue() == MDUpdateAction.DELETE) {
+                continue;
+            }
+            if (entry.isSetSymbol()) {
+                symbol = entry.getSymbol().getValue();
+            }
+            BigDecimal px = entry.isSetMDEntryPx() ? BigDecimal.valueOf(entry.getMDEntryPx().getValue()) : null;
+            BigDecimal size = entry.isSetMDEntrySize() ? BigDecimal.valueOf(entry.getMDEntrySize().getValue()) : null;
+            if (entry.getMDEntryType().getValue() == MDEntryType.BID) {
+                bid = px; bidSize = size;
+            } else if (entry.getMDEntryType().getValue() == MDEntryType.OFFER) {
+                ask = px; askSize = size;
+            }
+        }
+
+        return CanonicalQuote.builder()
+                .provider(FinaltoProviderAdapter.PROVIDER_NAME)
+                .symbol(symbol)
+                .bid(bid).bidSize(bidSize).ask(ask).askSize(askSize)
                 .occurredAt(Instant.now())
                 .build();
     }

@@ -1,6 +1,7 @@
 package com.aurify.fixclient.provider.finalto;
 
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
+import com.aurify.fixclient.canonical.event.CanonicalMarketDataRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.provider.OutboundPolicy;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import quickfix.fix44.NewOrderSingle;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -127,4 +129,59 @@ class FinaltoOutgoingBuilderTest {
         assertFalse(sent.isAfter(after.plusSeconds(1)), "TransactTime " + sent + " is ahead of UTC now");
     }
 
+    private CanonicalMarketDataRequest.CanonicalMarketDataRequestBuilder marketData() {
+        return CanonicalMarketDataRequest.builder()
+                .provider("finalto")
+                .mdReqId("MDREQ-1")
+                .symbols(List.of("XAUUSD"))
+                .marketDepth(1);
+    }
+
+    /**
+     * Regression: without MDUpdateType(265) CfhDemoPrices answers
+     * "Conditionally Required Field Missing (265)" as a session-level
+     * BusinessMessageReject and then goes quiet - the pricing session logs on,
+     * reports healthy, and never produces a price. It cost a full round of live
+     * debugging to see, because nothing in the gateway's own logs looks wrong.
+     */
+    @Test
+    void aSubscribeCarriesMdUpdateTypeWhichFinaltoTreatsAsMandatory() throws Exception {
+        Message mdr = builder.build(
+                marketData()
+                        .subscriptionRequestType(CanonicalMarketDataRequest.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES)
+                        .build(),
+                policy, null);
+
+        assertEquals(MDUpdateType.FULL_REFRESH, mdr.getInt(MDUpdateType.FIELD));
+        assertEquals(SubscriptionRequestType.SNAPSHOT_UPDATES, mdr.getChar(SubscriptionRequestType.FIELD));
+        assertEquals(1, mdr.getInt(MarketDepth.FIELD));
+        assertEquals("MDREQ-1", mdr.getString(MDReqID.FIELD));
+    }
+
+    /** 265 is conditional on establishing a subscription, so a teardown must
+     *  not carry it. */
+    @Test
+    void anUnsubscribeOmitsMdUpdateType() throws Exception {
+        Message mdr = builder.build(
+                marketData()
+                        .subscriptionRequestType(CanonicalMarketDataRequest.SubscriptionRequestType.UNSUBSCRIBE)
+                        .build(),
+                policy, null);
+
+        assertFalse(mdr.isSetField(MDUpdateType.FIELD), "265 must not be sent on an unsubscribe");
+        assertEquals(SubscriptionRequestType.DISABLE_PREVIOUS_SNAPSHOT_UPDATE_REQUEST,
+                mdr.getChar(SubscriptionRequestType.FIELD));
+    }
+
+    @Test
+    void aSubscribeAsksForBothSidesOfTheBookAndOneSymbol() throws Exception {
+        Message mdr = builder.build(
+                marketData()
+                        .subscriptionRequestType(CanonicalMarketDataRequest.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES)
+                        .build(),
+                policy, null);
+
+        assertEquals(2, mdr.getInt(NoMDEntryTypes.FIELD));
+        assertEquals(1, mdr.getInt(NoRelatedSym.FIELD));
+    }
 }

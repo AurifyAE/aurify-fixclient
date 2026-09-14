@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import quickfix.Session;
 import quickfix.SessionID;
 import quickfix.SessionSettings;
+import quickfix.mina.ssl.SSLSupport;
 
 import java.util.List;
 import java.util.Set;
@@ -35,7 +36,7 @@ class QuickFixSessionConfigFactoryTest {
                 new LpSessionSpec.FixSessionSpec(
                         "lp.example.com", 34550, "SENDER", "TARGET",
                         "u", "p", useSsl, true, 30, "", "", ""),
-                Set.of(), 0L, 0D, 0D, "fp", "", "");
+                Set.of(), 0L, 0D, 0D, "fp", "", "", null, "");
     }
 
     private SessionSettings applied(LpSessionSpec spec) {
@@ -87,11 +88,36 @@ class QuickFixSessionConfigFactoryTest {
     }
 
     @Test
-    void sslIsEnabledOnlyWhenTheCallerAsksForIt() throws Exception {
+    void sslFollowsWhatTheCallerAskedFor() throws Exception {
         SessionSettings withSsl = applied(spec(true));
-        assertEquals("Y", withSsl.getString(idOf(spec(true)), quickfix.mina.ssl.SSLSupport.SETTING_USE_SSL));
+        assertEquals("Y", withSsl.getString(idOf(spec(true)), SSLSupport.SETTING_USE_SSL));
 
         SessionSettings withoutSsl = applied(spec(false));
-        assertFalse(withoutSsl.isSetting(idOf(spec(false)), quickfix.mina.ssl.SSLSupport.SETTING_USE_SSL));
+        assertEquals("N", withoutSsl.getString(idOf(spec(false)), SSLSupport.SETTING_USE_SSL));
+    }
+
+    /**
+     * SessionSettings is a shared bean that outlives any one spec, so writing
+     * the SSL flag only when it is true leaves the previous "Y" in place and
+     * SSL can be switched on for an LP but never back off. It cost a live
+     * debugging round: an FXCubic pricing session kept failing its TLS
+     * handshake against a plaintext port while the stored config said
+     * useSsl=false, and nothing in the gateway's config surface disagreed.
+     */
+    @Test
+    void turningSslOffActuallyTurnsItOffOnASessionThatPreviouslyHadIt() throws Exception {
+        SessionSettings settings = factory.baseSettings();
+        SessionID sessionId = idOf(spec(true));
+
+        factory.applySpec(settings, sessionId, spec(true), SessionRole.TRADING);
+        assertEquals("Y", settings.getString(sessionId, SSLSupport.SETTING_USE_SSL));
+
+        // Same SessionID, same settings object - exactly what a re-ensure does.
+        factory.applySpec(settings, sessionId, spec(false), SessionRole.TRADING);
+
+        assertEquals("N", settings.getString(sessionId, SSLSupport.SETTING_USE_SSL),
+                "SSL must be switchable off, not just on");
+        assertEquals("N", settings.getString(sessionId, SSLSupport.SETTING_USE_SNI),
+                "SNI must not outlive the SSL setting that justified it");
     }
 }

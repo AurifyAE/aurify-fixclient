@@ -2,6 +2,7 @@ package com.aurify.fixclient.transport;
 
 import com.aurify.fixclient.canonical.event.CanonicalEvent;
 import com.aurify.fixclient.canonical.event.CanonicalOutboundRequest;
+import com.aurify.fixclient.marketdata.QuoteMessageQueue;
 import com.aurify.fixclient.pipeline.InboundEvent;
 import com.aurify.fixclient.pipeline.InboundMessageQueue;
 import com.aurify.fixclient.provider.LiquidityProviderAdapter;
@@ -43,6 +44,7 @@ class GatewayMessageCrackerTest {
             new SessionID("FIX.4.3", "AURIFY_TR", "NOBODY_TR", "acct-unregistered-TRADING");
 
     private InboundMessageQueue queue;
+    private QuoteMessageQueue quoteQueue;
     private GatewayMessageCracker cracker;
 
     @BeforeEach
@@ -55,12 +57,19 @@ class GatewayMessageCrackerTest {
                 new ProviderAdapterRegistry(List.of(new StubAdapter("fxcubic"), new StubAdapter("finalto")), sessionRegistry);
 
         queue = new InboundMessageQueue();
-        cracker = new GatewayMessageCracker(adapterRegistry, queue);
+        quoteQueue = new QuoteMessageQueue();
+        cracker = new GatewayMessageCracker(adapterRegistry, queue, quoteQueue);
     }
 
     private List<InboundEvent> collect() {
         List<InboundEvent> received = new CopyOnWriteArrayList<>();
         queue.stream().subscribe(received::add);
+        return received;
+    }
+
+    private List<InboundEvent> collectQuotes() {
+        List<InboundEvent> received = new CopyOnWriteArrayList<>();
+        quoteQueue.stream().subscribe(received::add);
         return received;
     }
 
@@ -83,11 +92,46 @@ class GatewayMessageCrackerTest {
     }
 
     @Test
-    void marketDataIsDroppedRatherThanRoutedOrThrown() {
+    void marketDataIsRoutedToItsOwnQueueNeverTheExecutionReportOne() {
         List<InboundEvent> received = collect();
+        List<InboundEvent> quotesReceived = collectQuotes();
         quickfix.fix44.MarketDataSnapshotFullRefresh snapshot = new quickfix.fix44.MarketDataSnapshotFullRefresh();
+
         assertDoesNotThrow(() -> cracker.crack(snapshot, FIX44_SESSION));
-        assertTrue(received.isEmpty());
+
+        assertTrue(received.isEmpty(), "market data must never land in the execution-report queue");
+        assertEquals(1, quotesReceived.size());
+        assertEquals("finalto", quotesReceived.get(0).event().provider());
+    }
+
+    @Test
+    void marketDataIncrementalRefreshIsRoutedTheSameWay() {
+        List<InboundEvent> quotesReceived = collectQuotes();
+        quickfix.fix44.MarketDataIncrementalRefresh incremental = new quickfix.fix44.MarketDataIncrementalRefresh();
+
+        assertDoesNotThrow(() -> cracker.crack(incremental, FIX44_SESSION));
+
+        assertEquals(1, quotesReceived.size());
+        assertEquals("finalto", quotesReceived.get(0).event().provider());
+    }
+
+    /**
+     * A MarketDataRequestReject refers to an MDReqID, so nothing in the order
+     * path can ever match it. It has to travel with the quotes, because the
+     * caller it concerns is the one waiting for prices - filed against orders
+     * instead, a refused subscription leaves that caller waiting forever for a
+     * tick the LP has already said it will not send.
+     */
+    @Test
+    void aMarketDataRequestRejectGoesToTheQuoteQueueNotTheOrderOne() {
+        List<InboundEvent> received = collect();
+        List<InboundEvent> quotesReceived = collectQuotes();
+        quickfix.fix44.MarketDataRequestReject reject = new quickfix.fix44.MarketDataRequestReject();
+
+        assertDoesNotThrow(() -> cracker.crack(reject, FIX44_SESSION));
+
+        assertTrue(received.isEmpty(), "a subscription reject must not be filed against orders");
+        assertEquals(1, quotesReceived.size());
     }
 
     @Test

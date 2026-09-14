@@ -57,7 +57,7 @@ public class DynamicSessionManager {
             LpSessionEntry existing = lpSessionRegistry.find(spec.lpAccountId(), role).orElse(null);
 
             if (existing != null) {
-                if (!existing.specFingerprint().equals(spec.specFingerprint())) {
+                if (!existing.specFingerprint().equals(spec.fingerprintFor(role))) {
                     log.info("Spec changed for LP account {} [{}] - rebuilding session",
                             spec.lpAccountId(), role);
                     teardown(existing);
@@ -154,7 +154,8 @@ public class DynamicSessionManager {
                 spec.provider(), role, fixSession.username(), fixSession.password(), spec.lpAccountId()));
 
         LpSessionEntry entry = new LpSessionEntry(
-                spec.lpAccountId(), role, sessionId, spec.provider(), spec.specFingerprint());
+                spec.lpAccountId(), role, sessionId, spec.provider(), spec.fingerprintFor(role),
+                spec.allowedSymbols());
         entry.markConnecting();
         lpSessionRegistry.put(entry);
 

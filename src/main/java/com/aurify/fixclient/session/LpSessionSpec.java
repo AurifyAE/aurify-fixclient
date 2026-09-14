@@ -24,7 +24,9 @@ public record LpSessionSpec(
         double maxTotalExposure,
         String specFingerprint,
         String account,
-        String partyId
+        String partyId,
+        FixSessionSpec pricing,
+        String pricingFingerprint
 ) {
 
     public LpSessionSpec {
@@ -36,6 +38,9 @@ public record LpSessionSpec(
         specFingerprint = blankTo(specFingerprint, "");
         account = blankTo(account, "");
         partyId = blankTo(partyId, "");
+        // pricing is intentionally nullable: most LP accounts have no pricing
+        // session configured, and this must never fail construction.
+        pricingFingerprint = blankTo(pricingFingerprint, "");
     }
 
     /** The LP-side account for FIX tag 1, or null when the caller set none. */
@@ -46,6 +51,19 @@ public record LpSessionSpec(
     /** NewOrderSingle PartyID (tag 448), or null when the caller set none. */
     public String partyIdOrNull() {
         return partyId.isEmpty() ? null : partyId;
+    }
+
+    /** The session config for a role, or null if the caller configured none
+     *  (always non-null for TRADING; may be null for PRICING). */
+    public FixSessionSpec sessionFor(SessionRole role) {
+        return role == SessionRole.PRICING ? pricing : trading;
+    }
+
+    /** The fingerprint that guards a role's session, kept independent so a
+     *  pricing-only credential change never forces the trading session (or
+     *  vice versa) to rebuild. */
+    public String fingerprintFor(SessionRole role) {
+        return role == SessionRole.PRICING ? pricingFingerprint : specFingerprint;
     }
 
     /** The subset an adapter is allowed to see: limits and symbols, no credentials. */
@@ -59,10 +77,12 @@ public record LpSessionSpec(
                 + ", provider=" + provider
                 + ", fixVersion=" + fixVersion
                 + ", trading=" + trading
+                + ", pricing=" + (pricing == null ? "<none>" : pricing)
                 + ", allowedSymbols=" + allowedSymbols
                 + ", maxOrderSize=" + maxOrderSize
                 + ", account=" + account
-                + ", fingerprint=" + specFingerprint + "]";
+                + ", fingerprint=" + specFingerprint
+                + ", pricingFingerprint=" + pricingFingerprint + "]";
     }
 
     /** One FIX session's connection parameters. */

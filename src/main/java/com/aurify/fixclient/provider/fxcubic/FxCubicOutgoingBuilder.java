@@ -1,6 +1,7 @@
 package com.aurify.fixclient.provider.fxcubic;
 
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
+import com.aurify.fixclient.canonical.event.CanonicalMarketDataRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOutboundRequest;
 import com.aurify.fixclient.provider.OutboundPolicy;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import quickfix.Message;
 import quickfix.SessionID;
 import quickfix.field.*;
+import quickfix.fix43.MarketDataRequest;
 import quickfix.fix43.NewOrderSingle;
 
 import java.time.LocalDateTime;
@@ -29,7 +31,40 @@ public class FxCubicOutgoingBuilder {
         if (request instanceof CanonicalOrderRequest order) {
             return buildNewOrderSingle(order, policy);
         }
+        if (request instanceof CanonicalMarketDataRequest mdRequest) {
+            return buildMarketDataRequest(mdRequest);
+        }
         throw new IllegalArgumentException("Unsupported outbound request type: " + request.getClass());
+    }
+
+    /**
+     * FXCubic spec: MarketDataRequest asks for both Bid(0) and Offer(1),
+     * MarketDepth=1 (top of book), one symbol per request recommended.
+     */
+    private MarketDataRequest buildMarketDataRequest(CanonicalMarketDataRequest request) {
+        char subscriptionType = request.getSubscriptionRequestType()
+                        == CanonicalMarketDataRequest.SubscriptionRequestType.UNSUBSCRIBE
+                ? SubscriptionRequestType.DISABLE_PREVIOUS_SNAPSHOT_UPDATE_REQUEST
+                : SubscriptionRequestType.SNAPSHOT_UPDATES;
+
+        MarketDataRequest mdr = new MarketDataRequest(
+                new MDReqID(request.getMdReqId()),
+                new SubscriptionRequestType(subscriptionType),
+                new MarketDepth(request.getMarketDepth() > 0 ? request.getMarketDepth() : 1));
+
+        MarketDataRequest.NoMDEntryTypes bidType = new MarketDataRequest.NoMDEntryTypes();
+        bidType.set(new MDEntryType(MDEntryType.BID));
+        mdr.addGroup(bidType);
+        MarketDataRequest.NoMDEntryTypes offerType = new MarketDataRequest.NoMDEntryTypes();
+        offerType.set(new MDEntryType(MDEntryType.OFFER));
+        mdr.addGroup(offerType);
+
+        for (String symbol : request.getSymbols()) {
+            MarketDataRequest.NoRelatedSym related = new MarketDataRequest.NoRelatedSym();
+            related.set(new Symbol(symbol));
+            mdr.addGroup(related);
+        }
+        return mdr;
     }
 
     private NewOrderSingle buildNewOrderSingle(CanonicalOrderRequest order, OutboundPolicy policy) {

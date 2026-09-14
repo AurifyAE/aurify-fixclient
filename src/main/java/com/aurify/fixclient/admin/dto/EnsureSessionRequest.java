@@ -75,7 +75,9 @@ public record EnsureSessionRequest(
                         ? derivedFingerprint(session)
                         : specFingerprint,
                 account,
-                partyId);
+                partyId,
+                null,  // admin session-control endpoints are trading-only
+                "");
     }
 
     private String derivedFingerprint(LpSessionSpec.FixSessionSpec session) {

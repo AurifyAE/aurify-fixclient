@@ -5,6 +5,7 @@ import com.aurify.fixclient.canonical.enums.CanonicalOrdStatus;
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalEvent;
 import com.aurify.fixclient.canonical.event.CanonicalExecutionReport;
+import com.aurify.fixclient.canonical.event.CanonicalQuote;
 import com.aurify.fixclient.canonical.event.CanonicalReject;
 import org.springframework.stereotype.Component;
 import quickfix.FieldNotFound;
@@ -13,7 +14,9 @@ import quickfix.SessionID;
 import quickfix.field.*;
 import quickfix.fix43.BusinessMessageReject;
 import quickfix.fix43.ExecutionReport;
+import quickfix.fix43.MarketDataIncrementalRefresh;
 import quickfix.fix43.MarketDataRequestReject;
+import quickfix.fix43.MarketDataSnapshotFullRefresh;
 import quickfix.fix43.OrderCancelReject;
 import quickfix.fix43.Reject;
 
@@ -44,6 +47,12 @@ public class FxCubicIncomingMapper {
         }
         if (message instanceof MarketDataRequestReject reject) {
             return mapMarketDataReject(reject);
+        }
+        if (message instanceof MarketDataSnapshotFullRefresh snapshot) {
+            return mapMarketDataSnapshot(snapshot);
+        }
+        if (message instanceof MarketDataIncrementalRefresh incremental) {
+            return mapMarketDataIncremental(incremental);
         }
         throw new IllegalArgumentException("Unhandled FXCubic message type: " + message.getClass());
     }
@@ -115,6 +124,70 @@ public class FxCubicIncomingMapper {
                 // MDReqRejReason: 0=Unknown symbol, 1=Duplicate MDReqID
                 .reasonCode(reject.isSetMDReqRejReason() ? String.valueOf(reject.getMDReqRejReason().getValue()) : null)
                 .text(reject.isSetText() ? reject.getText().getValue() : null)
+                .occurredAt(Instant.now())
+                .build();
+    }
+
+    /** 35=W: the LP's full top-of-book, per FXCubic spec one symbol per request
+     *  so one snapshot answers one subscription. Bid/Offer entries missing from
+     *  the group stay null - a one-sided market is legitimate, not an error. */
+    private CanonicalQuote mapMarketDataSnapshot(MarketDataSnapshotFullRefresh snapshot) throws FieldNotFound {
+        String symbol = snapshot.isSetSymbol() ? snapshot.getSymbol().getValue() : null;
+        BigDecimal bid = null, bidSize = null, ask = null, askSize = null;
+        int count = snapshot.getNoMDEntries().getValue();
+        for (int i = 1; i <= count; i++) {
+            MarketDataSnapshotFullRefresh.NoMDEntries entry = new MarketDataSnapshotFullRefresh.NoMDEntries();
+            snapshot.getGroup(i, entry);
+            BigDecimal px = entry.isSetMDEntryPx() ? BigDecimal.valueOf(entry.getMDEntryPx().getValue()) : null;
+            BigDecimal size = entry.isSetMDEntrySize() ? BigDecimal.valueOf(entry.getMDEntrySize().getValue()) : null;
+            if (entry.getMDEntryType().getValue() == MDEntryType.BID) {
+                bid = px; bidSize = size;
+            } else if (entry.getMDEntryType().getValue() == MDEntryType.OFFER) {
+                ask = px; askSize = size;
+            }
+        }
+
+        return CanonicalQuote.builder()
+                .provider(FxCubicProviderAdapter.PROVIDER_NAME)
+                .symbol(symbol)
+                .bid(bid).bidSize(bidSize).ask(ask).askSize(askSize)
+                .quoteId(snapshot.isSetMDReqID() ? snapshot.getMDReqID().getValue() : null)
+                .occurredAt(Instant.now())
+                .build();
+    }
+
+    /**
+     * 35=X: one or more entry-level updates. A DELETE(2) carries no usable
+     * price - the entry simply stops being quoted, and the next snapshot or
+     * update corrects the picture - so it is skipped rather than nulling out a
+     * side the venue never actually withdrew from.
+     */
+    private CanonicalQuote mapMarketDataIncremental(MarketDataIncrementalRefresh incremental) throws FieldNotFound {
+        String[] symbolHolder = new String[1];
+        int count = incremental.getNoMDEntries().getValue();
+        BigDecimal bid = null, bidSize = null, ask = null, askSize = null;
+        for (int i = 1; i <= count; i++) {
+            MarketDataIncrementalRefresh.NoMDEntries group = new MarketDataIncrementalRefresh.NoMDEntries();
+            incremental.getGroup(i, group);
+            if (group.isSetMDUpdateAction() && group.getMDUpdateAction().getValue() == MDUpdateAction.DELETE) {
+                continue;
+            }
+            if (group.isSetSymbol()) {
+                symbolHolder[0] = group.getSymbol().getValue();
+            }
+            BigDecimal px = group.isSetMDEntryPx() ? BigDecimal.valueOf(group.getMDEntryPx().getValue()) : null;
+            BigDecimal size = group.isSetMDEntrySize() ? BigDecimal.valueOf(group.getMDEntrySize().getValue()) : null;
+            if (group.getMDEntryType().getValue() == MDEntryType.BID) {
+                bid = px; bidSize = size;
+            } else if (group.getMDEntryType().getValue() == MDEntryType.OFFER) {
+                ask = px; askSize = size;
+            }
+        }
+
+        return CanonicalQuote.builder()
+                .provider(FxCubicProviderAdapter.PROVIDER_NAME)
+                .symbol(symbolHolder[0])
+                .bid(bid).bidSize(bidSize).ask(ask).askSize(askSize)
                 .occurredAt(Instant.now())
                 .build();
     }

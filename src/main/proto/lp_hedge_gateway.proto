@@ -32,6 +32,13 @@ service LpHedgeGateway {
   // Everything the journal still holds for one order. Lets the caller backfill
   // an order it has no complete record of without waiting for a live report.
   rpc GetOrderExecutions (GetOrderExecutionsRequest) returns (GetOrderExecutionsResponse);
+
+  // Top-of-book quotes for an LP account's own pricing session. The gateway
+  // logs on to the PRICING session (distinct from the trading session used
+  // by SubmitMarketOrder) on first subscriber, sends a MarketDataRequest,
+  // and fans out every tick to all subscribers of that lp_account_id until
+  // the last one disconnects, at which point it unsubscribes.
+  rpc StreamQuotes (StreamQuotesRequest) returns (stream Quote);
 }
 
 // One FIX session's connection parameters. Carries credentials, so this
@@ -73,6 +80,16 @@ message LpSessionSpec {
   // NewOrderSingle PartyID (tag 448) - required by providers that mandate a
   // NoPartyIDs group (e.g. Finalto). Left empty, the group is omitted.
   string party_id = 11;
+
+  // Optional pricing (market-data) session, separate from the trading
+  // session above. Absent (unset) means the LP account has no pricing
+  // session configured and StreamQuotes will refuse it.
+  FixSession pricing = 12;
+
+  // Fingerprint over the pricing session's fields only - kept separate from
+  // spec_fingerprint so editing/adding pricing config never forces a relogon
+  // of the trading session, and vice versa.
+  string pricing_fingerprint = 13;
 }
 
 message SubmitMarketOrderRequest {
@@ -156,6 +173,24 @@ message GetOrderExecutionsResponse {
   repeated ExecutionReport reports = 2;
   string error_code = 3;
   string error_message = 4;
+}
+
+message StreamQuotesRequest {
+  LpSessionSpec session = 1;        // must carry `pricing`
+  repeated string symbols = 2;      // empty = session.allowed_symbols
+}
+
+// One top-of-book tick, provider-neutral.
+message Quote {
+  string lp_account_id = 1;
+  string provider = 2;
+  string symbol = 3;
+  double bid = 4;
+  double bid_size = 5;
+  double ask = 6;
+  double ask_size = 7;
+  int64  occurred_at_epoch_ms = 8;
+  string quote_id = 9;
 }
 
 message EnsureSessionRequest {

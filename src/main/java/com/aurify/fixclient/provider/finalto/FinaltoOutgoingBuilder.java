@@ -1,6 +1,7 @@
 package com.aurify.fixclient.provider.finalto;
 
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
+import com.aurify.fixclient.canonical.event.CanonicalMarketDataRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.canonical.event.CanonicalOutboundRequest;
 import com.aurify.fixclient.provider.OutboundPolicy;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import quickfix.Message;
 import quickfix.SessionID;
 import quickfix.field.*;
+import quickfix.fix44.MarketDataRequest;
 import quickfix.fix44.NewOrderSingle;
 
 import java.time.LocalDateTime;
@@ -42,7 +44,59 @@ public class FinaltoOutgoingBuilder {
         if (request instanceof CanonicalOrderRequest order) {
             return buildNewOrderSingle(order, policy);
         }
+        if (request instanceof CanonicalMarketDataRequest mdRequest) {
+            return buildMarketDataRequest(mdRequest);
+        }
         throw new IllegalArgumentException("Unsupported outbound request type: " + request.getClass());
+    }
+
+    /**
+     * Request shape confirmed against the live CfhDemoPrices session rather
+     * than a spec document (none is checked in): Bid+Offer, MarketDepth=1, one
+     * symbol per request.
+     *
+     * MDUpdateType(265) is mandatory here and is what distinguishes this from
+     * FXCubic's request. Omitting it does not produce a MarketDataRequestReject
+     * (35=Y) naming the subscription - the venue answers with a session-level
+     * BusinessMessageReject "Conditionally Required Field Missing (265)"
+     * (35=j, 372=V, 380=5) and then simply never sends a price, so the symptom
+     * is a pricing session that logs on cleanly and stays silent.
+     *
+     * FULL_REFRESH asks for 35=W snapshots. At depth 1 a snapshot already
+     * carries the whole book, so there is nothing for 35=X to add, and it keeps
+     * the venue from sending deletes we would have to fold into cached state.
+     * The incremental path stays mapped for venues that send it anyway.
+     */
+    private MarketDataRequest buildMarketDataRequest(CanonicalMarketDataRequest request) {
+        boolean unsubscribe = request.getSubscriptionRequestType()
+                == CanonicalMarketDataRequest.SubscriptionRequestType.UNSUBSCRIBE;
+        char subscriptionType = unsubscribe
+                ? SubscriptionRequestType.DISABLE_PREVIOUS_SNAPSHOT_UPDATE_REQUEST
+                : SubscriptionRequestType.SNAPSHOT_UPDATES;
+
+        MarketDataRequest mdr = new MarketDataRequest(
+                new MDReqID(request.getMdReqId()),
+                new SubscriptionRequestType(subscriptionType),
+                new MarketDepth(request.getMarketDepth() > 0 ? request.getMarketDepth() : 1));
+
+        // Conditionally required: only when this establishes a subscription.
+        if (!unsubscribe) {
+            mdr.set(new MDUpdateType(MDUpdateType.FULL_REFRESH));
+        }
+
+        MarketDataRequest.NoMDEntryTypes bidType = new MarketDataRequest.NoMDEntryTypes();
+        bidType.set(new MDEntryType(MDEntryType.BID));
+        mdr.addGroup(bidType);
+        MarketDataRequest.NoMDEntryTypes offerType = new MarketDataRequest.NoMDEntryTypes();
+        offerType.set(new MDEntryType(MDEntryType.OFFER));
+        mdr.addGroup(offerType);
+
+        for (String symbol : request.getSymbols()) {
+            MarketDataRequest.NoRelatedSym related = new MarketDataRequest.NoRelatedSym();
+            related.set(new Symbol(symbol));
+            mdr.addGroup(related);
+        }
+        return mdr;
     }
 
     private NewOrderSingle buildNewOrderSingle(CanonicalOrderRequest order, OutboundPolicy policy) {

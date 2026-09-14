@@ -32,6 +32,10 @@ public final class LpSessionSpecMapper {
                 ? fingerprintOf(proto)   // caller did not supply one; derive it so
                 : proto.getSpecFingerprint(); // credential edits still force a relogon
 
+        // Pricing is optional: most LP accounts have no pricing session.
+        LpSessionSpec.FixSessionSpec pricing = proto.hasPricing() ? toDomain(proto.getPricing()) : null;
+        String pricingFingerprint = proto.getPricingFingerprint();
+
         return new LpSessionSpec(
                 proto.getLpAccountId(),
                 proto.getProvider(),
@@ -43,7 +47,9 @@ public final class LpSessionSpecMapper {
                 proto.getMaxTotalExposure(),
                 fingerprint,
                 proto.getAccount(),
-                proto.getPartyId());
+                proto.getPartyId(),
+                pricing,
+                pricingFingerprint);
     }
 
     private static LpSessionSpec.FixSessionSpec toDomain(FixSession proto) {

@@ -27,6 +27,8 @@ class DynamicSessionManagerTest {
 
     private int port;
     private SocketAcceptor acceptor;
+    private int pricingPort;
+    private SocketAcceptor pricingAcceptor;
     private SessionLifecycleProperties lifecycle;
     private SocketInitiator initiator;
     private SessionSettings initiatorSettings;
@@ -45,6 +47,7 @@ class DynamicSessionManagerTest {
     void stop() {
         if (initiator != null) initiator.stop(true);
         if (acceptor != null) acceptor.stop(true);
+        if (pricingAcceptor != null) pricingAcceptor.stop(true);
     }
 
     @Test
@@ -96,6 +99,65 @@ class DynamicSessionManagerTest {
     }
 
     @Test
+    void pricingAndTradingSessionsAreIndependentAndKeyedByRole() throws Exception {
+        startPricingAcceptor();
+        LpSessionEntry trading = manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.TRADING);
+        LpSessionEntry pricing = manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.PRICING);
+
+        assertEquals(SessionState.LOGGED_ON, trading.state());
+        assertEquals(SessionState.LOGGED_ON, pricing.state());
+        assertEquals("acct-1-TRADING", trading.sessionId().getSessionQualifier());
+        assertEquals("acct-1-PRICING", pricing.sessionId().getSessionQualifier());
+        assertEquals(2, acceptorLogons.get(), "trading and pricing are two independent logons");
+    }
+
+    /**
+     * The whole reason pricingFingerprint is a field separate from
+     * specFingerprint: adding or editing a pricing session must never force a
+     * live trading session to relogon, and vice versa - a trading credential
+     * rotation must not silently drop a pricing subscription either.
+     */
+    @Test
+    void aPricingOnlyFingerprintChangeRebuildsOnlyThePricingSession() throws Exception {
+        startPricingAcceptor();
+        manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.TRADING);
+        LpSessionEntry pricingFirst = manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.PRICING);
+        assertEquals(2, acceptorLogons.get());
+
+        // Trading fingerprint unchanged, pricing fingerprint rotated (e.g. the
+        // pricing password was edited in the CRM).
+        manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-2"), SessionRole.TRADING);
+        assertEquals(2, acceptorLogons.get(),
+                "a pricing-only fingerprint change must not relogon the trading session");
+
+        LpSessionEntry pricingRebuilt =
+                manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-2"), SessionRole.PRICING);
+        assertEquals(3, acceptorLogons.get(),
+                "a changed pricing fingerprint must force a fresh pricing logon");
+        assertNotSame(pricingFirst, pricingRebuilt);
+        assertEquals("fp-px-2", pricingRebuilt.specFingerprint());
+    }
+
+    @Test
+    void aTradingOnlyFingerprintChangeRebuildsOnlyTheTradingSession() throws Exception {
+        startPricingAcceptor();
+        LpSessionEntry tradingFirst = manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.TRADING);
+        manager.ensureSession(specWithPricing("fp-tr-1", "fp-px-1"), SessionRole.PRICING);
+        assertEquals(2, acceptorLogons.get());
+
+        // Pricing fingerprint unchanged, trading fingerprint rotated (e.g. the
+        // trading password was edited in the CRM).
+        LpSessionEntry tradingRebuilt =
+                manager.ensureSession(specWithPricing("fp-tr-2", "fp-px-1"), SessionRole.TRADING);
+        assertEquals(3, acceptorLogons.get(), "a changed trading fingerprint must force a fresh trading logon");
+        assertNotSame(tradingFirst, tradingRebuilt);
+
+        manager.ensureSession(specWithPricing("fp-tr-2", "fp-px-1"), SessionRole.PRICING);
+        assertEquals(3, acceptorLogons.get(),
+                "a trading-only fingerprint change must not relogon the pricing session");
+    }
+
+    @Test
     void concurrentCallersProduceExactlyOneLogon() throws Exception {
         int callers = 8;
         ExecutorService pool = Executors.newFixedThreadPool(callers);
@@ -142,7 +204,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", port, "AURIFY_TR", "LP_TR",
                         "aurify", "s3cret", false, true, 30, "", "", ""),
-                Set.of(), 0L, 0D, 0D, "fp-other", "LP-ACC-2", "");
+                Set.of(), 0L, 0D, 0D, "fp-other", "LP-ACC-2", "", null, "");
 
         long start = System.currentTimeMillis();
         LpSessionException e = assertThrows(LpSessionException.class,
@@ -166,7 +228,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", freePort(), "AURIFY_TR", "LP_TR",
                         "u", "p", false, false, 30, "", "", ""),
-                Set.of(), 0L, 0D, 0D, "fp-down", "LP-ACC-1", "");
+                Set.of(), 0L, 0D, 0D, "fp-down", "LP-ACC-1", "", null, "");
 
         LpSessionException e = assertThrows(LpSessionException.class,
                 () -> manager.ensureSession(unreachable, SessionRole.TRADING));
@@ -192,7 +254,7 @@ class DynamicSessionManagerTest {
 
         // Comes up during attempt 1, whose dial has already failed, so it is
         // attempt 2's brand new session that finds it listening.
-        SocketAcceptor lateAcceptor = buildAcceptor(latePort);
+        SocketAcceptor lateAcceptor = buildAcceptor(latePort, "LP_TR", "AURIFY_TR");
         Thread starter = new Thread(() -> {
             try {
                 Thread.sleep(3_000L);
@@ -255,7 +317,7 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", port, "AURIFY_TR", "LP_TR",
                         "aurify", "s3cret", false, true, 30, "", "", ""),
-                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "");
+                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "", null, "");
     }
 
     /** The same spec against an arbitrary port and account. */
@@ -265,21 +327,49 @@ class DynamicSessionManagerTest {
                 new LpSessionSpec.FixSessionSpec(
                         "127.0.0.1", targetPort, "AURIFY_TR", "LP_TR",
                         "aurify", "s3cret", false, true, 30, "", "", ""),
-                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "");
+                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, fingerprint, "LP-ACC-1", "", null, "");
+    }
+
+    /**
+     * Same trading session as {@link #spec}, plus a pricing session on a
+     * second comp-ID pair against {@link #pricingAcceptor} - a real acceptor
+     * only ever answers one live connection per (unqualified) SessionID, so
+     * trading and pricing need separate comp IDs here even though the
+     * gateway's own registry keys them by role and would tolerate sharing.
+     */
+    private LpSessionSpec specWithPricing(String tradingFingerprint, String pricingFingerprint) {
+        return new LpSessionSpec(
+                "acct-1", "fxcubic", "FIX.4.3",
+                new LpSessionSpec.FixSessionSpec(
+                        "127.0.0.1", port, "AURIFY_TR", "LP_TR",
+                        "aurify", "s3cret", false, true, 30, "", "", ""),
+                Set.of("XAUUSD_1GRAM"), 500L, 1000D, 5000D, tradingFingerprint, "LP-ACC-1", "",
+                new LpSessionSpec.FixSessionSpec(
+                        "127.0.0.1", pricingPort, "AURIFY_PX", "LP_PX",
+                        "aurify", "px-s3cret", false, true, 30, "", "", ""),
+                pricingFingerprint);
+    }
+
+    /** Starts {@link #pricingAcceptor} on a fresh port - only the pricing
+     *  tests need it, so it is not part of the shared @BeforeEach setup. */
+    private void startPricingAcceptor() throws Exception {
+        pricingPort = freePort();
+        pricingAcceptor = buildAcceptor(pricingPort, "LP_PX", "AURIFY_PX");
+        pricingAcceptor.start();
     }
 
     /** Stands in for the LP: accepts the connection and answers the Logon. */
     private void startAcceptor() throws ConfigError {
-        acceptor = buildAcceptor(port);
+        acceptor = buildAcceptor(port, "LP_TR", "AURIFY_TR");
         acceptor.start();
     }
 
-    private SocketAcceptor buildAcceptor(int acceptPort) throws ConfigError {
+    private SocketAcceptor buildAcceptor(int acceptPort, String senderCompId, String targetCompId) throws ConfigError {
         SessionSettings settings = new SessionSettings();
         settings.setString("ConnectionType", "acceptor");
         settings.setBool("UseDataDictionary", true);
 
-        SessionID sessionId = new SessionID("FIX.4.3", "LP_TR", "AURIFY_TR");
+        SessionID sessionId = new SessionID("FIX.4.3", senderCompId, targetCompId);
         settings.setLong(sessionId, "SocketAcceptPort", acceptPort);
         settings.setString(sessionId, "StartTime", "00:00:00");
         settings.setString(sessionId, "EndTime", "23:59:59");

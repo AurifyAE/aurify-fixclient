@@ -6,17 +6,23 @@ import aurify.lphedge.v1.ExecutionReport;
 import aurify.lphedge.v1.GetOrderExecutionsRequest;
 import aurify.lphedge.v1.GetOrderExecutionsResponse;
 import aurify.lphedge.v1.LpHedgeGatewayGrpc;
+import aurify.lphedge.v1.Quote;
 import aurify.lphedge.v1.SessionStatusRequest;
 import aurify.lphedge.v1.SessionStatusResponse;
 import aurify.lphedge.v1.StreamExecutionReportsRequest;
+import aurify.lphedge.v1.StreamQuotesRequest;
 import aurify.lphedge.v1.SubmitMarketOrderRequest;
 import aurify.lphedge.v1.SubmitMarketOrderResponse;
 import com.aurify.fixclient.canonical.enums.CanonicalOrdStatus;
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalExecutionReport;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
+import com.aurify.fixclient.canonical.enums.MarketDataRejectReason;
+import com.aurify.fixclient.canonical.event.CanonicalReject;
 import com.aurify.fixclient.dispatch.OutboundFixDispatchService;
 import com.aurify.fixclient.journal.ExecutionJournal;
+import com.aurify.fixclient.marketdata.LpQuoteRegistry;
+import com.aurify.fixclient.marketdata.PricingSessionSubscribers;
 import com.aurify.fixclient.session.DynamicSessionManager;
 import com.aurify.fixclient.session.LpSessionEntry;
 import com.aurify.fixclient.session.LpSessionException;
@@ -34,9 +40,13 @@ import reactor.core.Disposable;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The gateway's only inbound contract.
@@ -58,6 +68,8 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     private final GrpcGatewayProperties properties;
     private final DynamicSessionManager sessionManager;
     private final ExecutionJournal executionJournal;
+    private final LpQuoteRegistry quoteRegistry;
+    private final PricingSessionSubscribers pricingSubscribers;
 
     @Override
     public void submitMarketOrder(SubmitMarketOrderRequest request,
@@ -180,6 +192,121 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         // Without this the Reactor subscription outlives the call and the journal
         // keeps a subscriber for every client that ever connected.
         serverObserver.setOnCancelHandler(subscription::dispose);
+    }
+
+    /**
+     * Top-of-book quotes for one LP account's pricing session.
+     *
+     * Logging on to the pricing session (distinct from the trading session
+     * used by SubmitMarketOrder) happens here, on first subscriber; the
+     * session's post-logon startup workflow does the actual FIX-level
+     * subscribe once it is logged on. Every subscriber for the same LP
+     * account shares the one underlying FIX session and quote stream -
+     * PricingSessionSubscribers tracks how many are left and closes the
+     * session once none remain, since a pricing session exists only to serve
+     * subscribers.
+     */
+    @Override
+    public void streamQuotes(StreamQuotesRequest request, StreamObserver<Quote> observer) {
+        LpSessionSpec spec;
+        try {
+            spec = LpSessionSpecMapper.toDomain(request.getSession());
+        } catch (IllegalArgumentException e) {
+            observer.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+            return;
+        }
+
+        if (spec.pricing() == null) {
+            observer.onError(Status.FAILED_PRECONDITION
+                    .withDescription("LP account " + spec.lpAccountId() + " has no pricing session configured")
+                    .asRuntimeException());
+            return;
+        }
+
+        Set<String> symbols = new LinkedHashSet<>(
+                request.getSymbolsList().isEmpty() ? List.copyOf(spec.allowedSymbols()) : request.getSymbolsList());
+        if (symbols.isEmpty()) {
+            observer.onError(Status.INVALID_ARGUMENT
+                    .withDescription("symbols is required when the session has no allowed_symbols")
+                    .asRuntimeException());
+            return;
+        }
+
+        try {
+            sessionManager.ensureSession(spec, SessionRole.PRICING);
+        } catch (LpSessionException e) {
+            observer.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
+            return;
+        }
+
+        pricingSubscribers.register(spec.lpAccountId());
+        // Guards against unregistering twice - a server-side error and a
+        // client cancel arriving close together must still decrement once.
+        AtomicBoolean unregistered = new AtomicBoolean();
+        Runnable unregisterOnce = () -> {
+            if (unregistered.compareAndSet(false, true)) {
+                pricingSubscribers.unregister(spec.lpAccountId());
+            }
+        };
+
+        ServerCallStreamObserver<Quote> serverObserver = (ServerCallStreamObserver<Quote>) observer;
+        Disposable subscription = quoteRegistry.streamFor(spec.lpAccountId(), symbols)
+                .subscribe(
+                        attributed -> {
+                            if (!serverObserver.isCancelled()) {
+                                serverObserver.onNext(QuoteMapper.toProto(attributed));
+                            }
+                        },
+                        error -> {
+                            log.error("Quote stream failed for LP account {}", spec.lpAccountId(), error);
+                            unregisterOnce.run();
+                            serverObserver.onError(Status.INTERNAL
+                                    .withDescription("Quote stream failed")
+                                    .withCause(error).asRuntimeException());
+                        });
+
+        // The venue refusing the subscription (35=Y) is terminal for this call:
+        // no price is coming, so ending it with the LP's own words is the only
+        // way the caller can tell "not entitled" from "market is quiet". Sent
+        // as FAILED_PRECONDITION so the caller knows not to retry - a
+        // permission or symbol problem is not fixed by reconnecting.
+        Disposable rejectSubscription = quoteRegistry.rejectsFor(spec.lpAccountId())
+                .subscribe(attributed -> {
+                    if (serverObserver.isCancelled()) {
+                        return;
+                    }
+                    unregisterOnce.run();
+                    serverObserver.onError(Status.FAILED_PRECONDITION
+                            .withDescription(describeReject(attributed.reject()))
+                            .asRuntimeException());
+                });
+
+        serverObserver.setOnCancelHandler(() -> {
+            subscription.dispose();
+            rejectSubscription.dispose();
+            unregisterOnce.run();
+        });
+    }
+
+    /** The venue's own wording where it gave any, so the operator sees what the
+     *  LP actually said rather than a code they then have to look up. */
+    private String describeReject(CanonicalReject reject) {
+        String code = blankToNull(reject.getReasonCode());
+        // The venue's Text(58) when it sent one; otherwise the standard meaning
+        // of the code, because a bare "reason 3" tells the operator nothing.
+        String text = blankToNull(reject.getText());
+        if (text == null) {
+            text = MarketDataRejectReason.describe(code);
+        }
+
+        StringBuilder message = new StringBuilder("LP refused the market data subscription");
+        if (text != null) {
+            message.append(": ").append(text);
+        }
+        if (code != null) {
+            message.append(" (MDReqRejReason ").append(code).append(")");
+        }
+        return message.toString();
     }
 
     @Override

@@ -2,6 +2,8 @@ package com.aurify.fixclient.session;
 
 import quickfix.SessionID;
 
+import java.util.Set;
+
 /**
  * Runtime bookkeeping for one live LP session. Mutable and shared across
  * threads, so every field that changes after construction is volatile.
@@ -15,6 +17,10 @@ public class LpSessionEntry {
     private final SessionRole role;
     private final SessionID sessionId;
     private final String provider;
+    /** Carried through from the spec so a PRICING session's post-logon
+     *  subscribe (which only ever receives a SessionID, not the spec) knows
+     *  what to ask the venue for. Unused for TRADING entries. */
+    private final Set<String> allowedSymbols;
 
     private volatile String specFingerprint;
     private volatile SessionState state = SessionState.ABSENT;
@@ -23,11 +29,17 @@ public class LpSessionEntry {
 
     public LpSessionEntry(String lpAccountId, SessionRole role, SessionID sessionId,
                           String provider, String specFingerprint) {
+        this(lpAccountId, role, sessionId, provider, specFingerprint, Set.of());
+    }
+
+    public LpSessionEntry(String lpAccountId, SessionRole role, SessionID sessionId,
+                          String provider, String specFingerprint, Set<String> allowedSymbols) {
         this.lpAccountId = lpAccountId;
         this.role = role;
         this.sessionId = sessionId;
         this.provider = provider;
         this.specFingerprint = specFingerprint;
+        this.allowedSymbols = allowedSymbols == null ? Set.of() : Set.copyOf(allowedSymbols);
         this.lastUsedAtEpochMs = System.currentTimeMillis();
     }
 
@@ -35,6 +47,7 @@ public class LpSessionEntry {
     public SessionRole role() { return role; }
     public SessionID sessionId() { return sessionId; }
     public String provider() { return provider; }
+    public Set<String> allowedSymbols() { return allowedSymbols; }
     public String specFingerprint() { return specFingerprint; }
     public SessionState state() { return state; }
     public long loggedOnAtEpochMs() { return loggedOnAtEpochMs; }
