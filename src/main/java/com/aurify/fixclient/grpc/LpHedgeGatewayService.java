@@ -16,6 +16,8 @@ import aurify.lphedge.v1.SubmitMarketOrderResponse;
 import com.aurify.fixclient.canonical.enums.CanonicalOrdStatus;
 import com.aurify.fixclient.canonical.enums.CanonicalSide;
 import com.aurify.fixclient.canonical.event.CanonicalExecutionReport;
+import com.aurify.fixclient.canonical.event.CanonicalMarketDataRequest;
+import com.aurify.fixclient.provider.OutboundPolicy;
 import com.aurify.fixclient.canonical.event.CanonicalOrderRequest;
 import com.aurify.fixclient.canonical.enums.MarketDataRejectReason;
 import com.aurify.fixclient.canonical.event.CanonicalReject;
@@ -44,6 +46,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -208,23 +211,23 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
      */
     @Override
     public void streamQuotes(StreamQuotesRequest request, StreamObserver<Quote> observer) {
-        LpSessionSpec spec;
+        LpSessionSpec requested;
         try {
-            spec = LpSessionSpecMapper.toDomain(request.getSession());
+            requested = LpSessionSpecMapper.toDomain(request.getSession());
         } catch (IllegalArgumentException e) {
             observer.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
             return;
         }
 
-        if (spec.pricing() == null) {
+        if (requested.pricing() == null) {
             observer.onError(Status.FAILED_PRECONDITION
-                    .withDescription("LP account " + spec.lpAccountId() + " has no pricing session configured")
+                    .withDescription("LP account " + requested.lpAccountId() + " has no pricing session configured")
                     .asRuntimeException());
             return;
         }
 
         Set<String> symbols = new LinkedHashSet<>(
-                request.getSymbolsList().isEmpty() ? List.copyOf(spec.allowedSymbols()) : request.getSymbolsList());
+                request.getSymbolsList().isEmpty() ? List.copyOf(requested.allowedSymbols()) : request.getSymbolsList());
         if (symbols.isEmpty()) {
             observer.onError(Status.INVALID_ARGUMENT
                     .withDescription("symbols is required when the session has no allowed_symbols")
@@ -232,12 +235,28 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             return;
         }
 
+        // The session subscribes to the LP from the spec's symbol list, not from
+        // this request's - so a caller that names symbols here but sends no
+        // allowed_symbols would log on, hold the stream open and never ask the
+        // venue for a single price.
+        LpSessionSpec spec = requested.allowedSymbols().isEmpty()
+                ? requested.withAllowedSymbols(symbols) : requested;
+
+        LpSessionEntry pricingEntry;
         try {
-            sessionManager.ensureSession(spec, SessionRole.PRICING);
+            pricingEntry = sessionManager.ensureSession(spec, SessionRole.PRICING);
         } catch (LpSessionException e) {
             observer.onError(Status.UNAVAILABLE.withDescription(e.getMessage()).asRuntimeException());
             return;
         }
+
+        // A session that was already logged on was subscribed at its own logon,
+        // to whatever symbols it had then. Anything this call adds has to be
+        // requested now.
+        Set<String> newlySubscribed = pricingEntry.addSymbols(symbols);
+        subscribeMarketData(pricingEntry, newlySubscribed);
+        log.info("StreamQuotes for LP account {}: symbols={} newly subscribed={}",
+                spec.lpAccountId(), symbols, newlySubscribed);
 
         pricingSubscribers.register(spec.lpAccountId());
         // Guards against unregistering twice - a server-side error and a
@@ -286,6 +305,30 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             rejectSubscription.dispose();
             unregisterOnce.run();
         });
+    }
+
+    /** One MarketDataRequest per symbol (both LPs' specs ask for that). A failure
+     *  gives the symbol back to the entry so the next StreamQuotes retries it. */
+    private void subscribeMarketData(LpSessionEntry pricing, Set<String> symbols) {
+        for (String symbol : symbols) {
+            CanonicalMarketDataRequest mdRequest = CanonicalMarketDataRequest.builder()
+                    .provider(pricing.provider())
+                    .mdReqId(UUID.randomUUID().toString())
+                    .symbols(List.of(symbol))
+                    .subscriptionRequestType(CanonicalMarketDataRequest.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES)
+                    .marketDepth(1)
+                    .build();
+            try {
+                dispatchService.dispatchOrThrow(mdRequest,
+                        new OutboundPolicy(pricing.allowedSymbols(), 0L, 0D, 0D),
+                        pricing.sessionId(), pricing.lpAccountId());
+                log.info("Subscribed to market data for LP account {} symbol {}", pricing.lpAccountId(), symbol);
+            } catch (RuntimeException e) {
+                pricing.removeSymbol(symbol);
+                log.warn("Failed to subscribe market data for LP account {} symbol {}",
+                        pricing.lpAccountId(), symbol, e);
+            }
+        }
     }
 
     /** The venue's own wording where it gave any, so the operator sees what the

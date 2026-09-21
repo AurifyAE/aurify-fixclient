@@ -12,6 +12,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Attributes incoming quotes to an LP account and fans them out to gRPC
@@ -40,6 +42,10 @@ public class LpQuoteRegistry {
     private final Sinks.Many<AttributedReject> rejects =
             Sinks.many().multicast().onBackpressureBuffer(256, false);
 
+    /** Account+symbol pairs already announced, so the first tick of a
+     *  subscription is visible at INFO without logging every tick. */
+    private final Set<String> seenFirstTick = ConcurrentHashMap.newKeySet();
+
     public void record(InboundEvent inbound) {
         String lpAccountId = lpSessionRegistry.findBySessionId(inbound.sessionId())
                 .map(LpSessionEntry::lpAccountId)
@@ -49,6 +55,10 @@ public class LpQuoteRegistry {
             return;
         }
         if (inbound.event() instanceof CanonicalQuote quote) {
+            if (seenFirstTick.add(lpAccountId + "|" + quote.getSymbol())) {
+                log.info("First quote for LP account {} symbol {}: bid={} ask={}",
+                        lpAccountId, quote.getSymbol(), quote.getBid(), quote.getAsk());
+            }
             live.tryEmitNext(new AttributedQuote(lpAccountId, quote));
         } else if (inbound.event() instanceof CanonicalReject reject) {
             log.warn("LP account {} refused a market data subscription: {} ({})",
@@ -65,8 +75,24 @@ public class LpQuoteRegistry {
     /** Live quotes for one LP account, optionally narrowed to a symbol set. An
      *  empty set means "every symbol". */
     public Flux<AttributedQuote> streamFor(String lpAccountId, Set<String> symbols) {
-        return live.asFlux().filter(aq ->
-                aq.lpAccountId().equals(lpAccountId)
-                        && (symbols.isEmpty() || symbols.contains(aq.quote().getSymbol())));
+        Set<String> wanted = symbols.stream().map(LpQuoteRegistry::normalize).collect(Collectors.toSet());
+        return live.asFlux().filter(aq -> {
+            if (!aq.lpAccountId().equals(lpAccountId)) {
+                return false;
+            }
+            if (wanted.isEmpty() || wanted.contains(normalize(aq.quote().getSymbol()))) {
+                return true;
+            }
+            log.debug("Dropping quote for LP account {}: symbol {} not in requested {}",
+                    lpAccountId, aq.quote().getSymbol(), symbols);
+            return false;
+        });
+    }
+
+    /** "XAU/USD", "xau_usd" and "XAUUSD" are one instrument; an LP is free to
+     *  echo a different spelling than the one it was asked for, and an exact
+     *  match would silently drop every tick. */
+    static String normalize(String symbol) {
+        return symbol == null ? "" : symbol.replaceAll("[/_\\-\\s]", "").toUpperCase();
     }
 }

@@ -8,6 +8,18 @@ spring:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
 
+logging:
+  file:
+    name: ${LOG_FILE:logs/fix-gateway.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 14
+      total-size-cap: 2GB
+  level:
+    # DEBUG adds every FIX message in/out at the application layer (GatewayFixApplication).
+    com.aurify.fixclient: ${GATEWAY_LOG_LEVEL:INFO}
+
 management:
   endpoints:
     web:

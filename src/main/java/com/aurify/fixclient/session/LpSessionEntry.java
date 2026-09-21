@@ -2,7 +2,10 @@ package com.aurify.fixclient.session;
 
 import quickfix.SessionID;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Runtime bookkeeping for one live LP session. Mutable and shared across
@@ -19,8 +22,10 @@ public class LpSessionEntry {
     private final String provider;
     /** Carried through from the spec so a PRICING session's post-logon
      *  subscribe (which only ever receives a SessionID, not the spec) knows
-     *  what to ask the venue for. Unused for TRADING entries. */
-    private final Set<String> allowedSymbols;
+     *  what to ask the venue for. Unused for TRADING entries. Grows when a
+     *  later StreamQuotes call asks for a symbol the session was not opened
+     *  with, so a reconnect re-subscribes those too. */
+    private final Set<String> allowedSymbols = ConcurrentHashMap.newKeySet();
 
     private volatile String specFingerprint;
     private volatile SessionState state = SessionState.ABSENT;
@@ -39,7 +44,9 @@ public class LpSessionEntry {
         this.sessionId = sessionId;
         this.provider = provider;
         this.specFingerprint = specFingerprint;
-        this.allowedSymbols = allowedSymbols == null ? Set.of() : Set.copyOf(allowedSymbols);
+        if (allowedSymbols != null) {
+            this.allowedSymbols.addAll(allowedSymbols);
+        }
         this.lastUsedAtEpochMs = System.currentTimeMillis();
     }
 
@@ -47,7 +54,24 @@ public class LpSessionEntry {
     public SessionRole role() { return role; }
     public SessionID sessionId() { return sessionId; }
     public String provider() { return provider; }
-    public Set<String> allowedSymbols() { return allowedSymbols; }
+    /** Snapshot - safe to iterate while another call adds symbols. */
+    public Set<String> allowedSymbols() { return Set.copyOf(allowedSymbols); }
+
+    /** Records symbols this session must now be subscribed to; returns only
+     *  the ones it was not already carrying, i.e. the ones still needing a
+     *  MarketDataRequest. */
+    public Set<String> addSymbols(Collection<String> symbols) {
+        Set<String> added = new LinkedHashSet<>();
+        for (String symbol : symbols) {
+            if (allowedSymbols.add(symbol)) {
+                added.add(symbol);
+            }
+        }
+        return added;
+    }
+
+    /** Undoes addSymbols for a symbol whose subscribe failed, so the next call retries it. */
+    public void removeSymbol(String symbol) { allowedSymbols.remove(symbol); }
     public String specFingerprint() { return specFingerprint; }
     public SessionState state() { return state; }
     public long loggedOnAtEpochMs() { return loggedOnAtEpochMs; }

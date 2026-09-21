@@ -43,6 +43,14 @@ public record LpSessionSpec(
         pricingFingerprint = blankTo(pricingFingerprint, "");
     }
 
+    /** Same spec with a different symbol allowlist. Fingerprints are untouched,
+     *  so this never forces a session rebuild. */
+    public LpSessionSpec withAllowedSymbols(Set<String> symbols) {
+        return new LpSessionSpec(lpAccountId, provider, fixVersion, trading, symbols,
+                maxOrderSize, maxPositionPerSymbol, maxTotalExposure, specFingerprint,
+                account, partyId, pricing, pricingFingerprint);
+    }
+
     /** The LP-side account for FIX tag 1, or null when the caller set none. */
     public String accountOrNull() {
         return account.isEmpty() ? null : account;
