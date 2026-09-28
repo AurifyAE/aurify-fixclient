@@ -77,6 +77,9 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     @Override
     public void submitMarketOrder(SubmitMarketOrderRequest request,
                                   StreamObserver<SubmitMarketOrderResponse> observer) {
+        log.info("Received SubmitMarketOrder: orderId={} lpAccount={} symbol={} side={} qty={}",
+                request.getOrderId(), request.getLpAccountId(), request.getSymbol(),
+                request.getSide(), request.getQuantity());
         try {
             validate(request);
             LpSessionSpec spec = LpSessionSpecMapper.toDomain(request.getSession());
@@ -109,10 +112,14 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             registration.getFuture().orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .whenComplete((report, error) -> {
                         if (error != null) {
+                            log.warn("SubmitMarketOrder {} did not settle within {}ms: {}",
+                                    clOrdId, timeoutMs, error.getMessage());
                             observer.onNext(withReports(toFailureResponse(
                                     error, clOrdId, timeoutMs, registration.getLastAck()), clOrdId));
                             observer.onCompleted();
                         } else {
+                            log.info("SubmitMarketOrder {} settled: status={} avgPx={} cumQty={}",
+                                    clOrdId, report.getOrdStatus(), report.getAvgPx(), report.getCumQty());
                             observer.onNext(withReports(toResponse(report), clOrdId));
                             observer.onCompleted();
                         }

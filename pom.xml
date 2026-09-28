@@ -19,8 +19,13 @@
     <java.version>17</java.version>
     <quickfixj.version>2.3.1</quickfixj.version>
     <resilience4j.version>2.2.0</resilience4j.version>
-    <grpc.version>1.65.1</grpc.version>
-    <protobuf.version>3.25.3</protobuf.version>
+    <!-- 1.76.0 is the first grpc-java release whose osx-aarch_64 protoc-gen-grpc-java plugin
+         binary is a real universal (x86_64+arm64) build; every version from 1.45 through 1.75
+         ships an x86_64-only binary under that classifier, which needs Rosetta 2 to run on
+         Apple Silicon. Bumped together with protobuf.version (grpc-protobuf:1.76.0 depends on
+         protobuf-java 3.25.8) to keep the generated stub code and runtime in sync. -->
+    <grpc.version>1.76.0</grpc.version>
+    <protobuf.version>3.25.8</protobuf.version>
   </properties>
 
   <dependencies>

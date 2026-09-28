@@ -48,9 +48,11 @@ public class GatewayMessageCracker {
                 case MsgType.EXECUTION_REPORT,
                      MsgType.ORDER_CANCEL_REJECT,
                      MsgType.REJECT,
-                     MsgType.BUSINESS_MESSAGE_REJECT ->
+                     MsgType.BUSINESS_MESSAGE_REJECT -> {
+                        log.info("Received {} from market on session {}", msgType, sessionId);
                         enqueue(inboundMessageQueue::offer, sessionId, message,
                                 adapter -> adapter.mapIncoming(message, sessionId));
+                    }
                 // A MarketDataRequestReject answers a subscription, never an
                 // order - it carries an MDReqID, so nothing in the order path
                 // can match it. Routing it with the quotes is what lets a

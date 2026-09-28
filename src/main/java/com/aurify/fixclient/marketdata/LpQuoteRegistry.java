@@ -7,12 +7,15 @@ import com.aurify.fixclient.session.LpSessionEntry;
 import com.aurify.fixclient.session.LpSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +49,11 @@ public class LpQuoteRegistry {
      *  subscription is visible at INFO without logging every tick. */
     private final Set<String> seenFirstTick = ConcurrentHashMap.newKeySet();
 
+    /** Ticks received per LP account since the last {@link #logTickRates()} run,
+     *  so "am I still getting live prices" is answered on a heartbeat instead of
+     *  only once, on the very first tick of a subscription. */
+    private final Map<String, AtomicLong> tickCounts = new ConcurrentHashMap<>();
+
     public void record(InboundEvent inbound) {
         String lpAccountId = lpSessionRegistry.findBySessionId(inbound.sessionId())
                 .map(LpSessionEntry::lpAccountId)
@@ -59,6 +67,7 @@ public class LpQuoteRegistry {
                 log.info("First quote for LP account {} symbol {}: bid={} ask={}",
                         lpAccountId, quote.getSymbol(), quote.getBid(), quote.getAsk());
             }
+            tickCounts.computeIfAbsent(lpAccountId, k -> new AtomicLong()).incrementAndGet();
             live.tryEmitNext(new AttributedQuote(lpAccountId, quote));
         } else if (inbound.event() instanceof CanonicalReject reject) {
             log.warn("LP account {} refused a market data subscription: {} ({})",
@@ -70,6 +79,22 @@ public class LpQuoteRegistry {
     /** Subscription rejections for one LP account. */
     public Flux<AttributedReject> rejectsFor(String lpAccountId) {
         return rejects.asFlux().filter(ar -> ar.lpAccountId().equals(lpAccountId));
+    }
+
+    /** Heartbeat so "are live prices still coming in" has an ongoing answer in
+     *  the logs, not just the one-time "First quote" line per account+symbol. A
+     *  quiet interval with an active pricing session (0 ticks) is exactly the
+     *  "provider is silent" case an operator needs to notice. */
+    @Scheduled(fixedDelayString = "${fix-gateway.market-data.tick-rate-log-interval-ms:30000}")
+    void logTickRates() {
+        tickCounts.forEach((lpAccountId, count) -> {
+            long ticks = count.getAndSet(0);
+            if (ticks > 0) {
+                log.info("LP account {}: {} quote ticks received in the last interval", lpAccountId, ticks);
+            } else {
+                log.warn("LP account {}: no quote ticks received in the last interval", lpAccountId);
+            }
+        });
     }
 
     /** Live quotes for one LP account, optionally narrowed to a symbol set. An

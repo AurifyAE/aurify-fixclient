@@ -49,6 +49,9 @@ public class OutboundFixDispatchService {
         }
         LiquidityProviderAdapter adapter = adapterOpt.get();
 
+        log.info("Dispatching {} for LP account {} (provider {}) on session {}",
+                request.getClass().getSimpleName(), lpAccountId, request.provider(), sessionId);
+
         ValidationResult validation = adapter.validateOutbound(request, policy);
         if (!validation.isValid()) {
             throw new IllegalArgumentException("Outbound request rejected: " + validation.getErrors());
@@ -67,6 +70,7 @@ public class OutboundFixDispatchService {
             boolean sent = Session.sendToTarget(fixMessage, sessionId);
             if (sent) {
                 persistenceGateway.persistRawOutbound(sessionId, fixMessage.toString());
+                log.info("Sent {} to market on session {}", fixMessage.getClass().getSimpleName(), sessionId);
             } else {
                 throw new IllegalStateException("Session.sendToTarget returned false for " + sessionId);
             }
