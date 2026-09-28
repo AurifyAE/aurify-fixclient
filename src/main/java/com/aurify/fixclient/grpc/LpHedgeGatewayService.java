@@ -3,6 +3,7 @@ package com.aurify.fixclient.grpc;
 import aurify.lphedge.v1.CloseSessionRequest;
 import aurify.lphedge.v1.EnsureSessionRequest;
 import aurify.lphedge.v1.ExecutionReport;
+import aurify.lphedge.v1.FixSession;
 import aurify.lphedge.v1.GetOrderExecutionsRequest;
 import aurify.lphedge.v1.GetOrderExecutionsResponse;
 import aurify.lphedge.v1.LpHedgeGatewayGrpc;
@@ -31,6 +32,7 @@ import com.aurify.fixclient.session.LpSessionException;
 import com.aurify.fixclient.session.LpSessionSpec;
 import com.aurify.fixclient.session.SessionRole;
 import com.aurify.fixclient.session.SessionState;
+import com.google.protobuf.TextFormat;
 import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -77,9 +79,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     @Override
     public void submitMarketOrder(SubmitMarketOrderRequest request,
                                   StreamObserver<SubmitMarketOrderResponse> observer) {
-        log.info("Received SubmitMarketOrder: orderId={} lpAccount={} symbol={} side={} qty={}",
-                request.getOrderId(), request.getLpAccountId(), request.getSymbol(),
-                request.getSide(), request.getQuantity());
+        log.info("Received SubmitMarketOrder: {}", redacted(request));
         try {
             validate(request);
             LpSessionSpec spec = LpSessionSpecMapper.toDomain(request.getSession());
@@ -139,6 +139,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     /** Connectivity check: logs on without sending an order. */
     @Override
     public void ensureSession(EnsureSessionRequest request, StreamObserver<SessionStatusResponse> observer) {
+        log.info("Received EnsureSession: {}", redacted(request));
         try {
             LpSessionSpec spec = LpSessionSpecMapper.toDomain(request.getSession());
             LpSessionEntry entry = sessionManager.ensureSession(spec, SessionRole.TRADING);
@@ -154,6 +155,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
 
     @Override
     public void getSessionStatus(SessionStatusRequest request, StreamObserver<SessionStatusResponse> observer) {
+        log.info("Received GetSessionStatus: {}", TextFormat.printer().shortDebugString(request));
         LpSessionEntry entry = sessionManager.statusOf(request.getLpAccountId(), SessionRole.TRADING);
         observer.onNext(entry != null
                 ? sessionStatus(entry, request.getLpAccountId())
@@ -176,6 +178,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     @Override
     public void streamExecutionReports(StreamExecutionReportsRequest request,
                                        StreamObserver<ExecutionReport> observer) {
+        log.info("Received StreamExecutionReports: {}", TextFormat.printer().shortDebugString(request));
         Instant since = request.getSinceEpochMs() > 0
                 ? Instant.ofEpochMilli(request.getSinceEpochMs())
                 : null;
@@ -218,6 +221,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
      */
     @Override
     public void streamQuotes(StreamQuotesRequest request, StreamObserver<Quote> observer) {
+        log.info("Received StreamQuotes: {}", redacted(request));
         LpSessionSpec requested;
         try {
             requested = LpSessionSpecMapper.toDomain(request.getSession());
@@ -362,6 +366,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     @Override
     public void getOrderExecutions(GetOrderExecutionsRequest request,
                                    StreamObserver<GetOrderExecutionsResponse> observer) {
+        log.info("Received GetOrderExecutions: {}", TextFormat.printer().shortDebugString(request));
         String clOrdId = blankToNull(request.getClOrdId());
         if (clOrdId == null) {
             observer.onError(Status.INVALID_ARGUMENT
@@ -378,6 +383,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
 
     @Override
     public void closeSession(CloseSessionRequest request, StreamObserver<SessionStatusResponse> observer) {
+        log.info("Received CloseSession: {}", TextFormat.printer().shortDebugString(request));
         boolean closed = sessionManager.closeSession(request.getLpAccountId(), SessionRole.TRADING);
         observer.onNext(SessionStatusResponse.newBuilder()
                 .setSuccess(closed)
@@ -460,6 +466,48 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
 
     private void required(String value, String field) { if (blankToNull(value) == null) throw new IllegalArgumentException(field + " is required"); }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value; }
+
+    /** The request as received, minus the FIX password(s) carried in its
+     *  session - this channel requires mTLS, but logs are read by more people
+     *  than the channel is, and a plaintext LP password in a log file is
+     *  exactly the leak mTLS was meant to prevent. */
+    private static String redacted(SubmitMarketOrderRequest request) {
+        return TextFormat.printer().shortDebugString(
+                request.hasSession()
+                        ? request.toBuilder().setSession(redactSession(request.getSession())).build()
+                        : request);
+    }
+
+    private static String redacted(EnsureSessionRequest request) {
+        return TextFormat.printer().shortDebugString(
+                request.hasSession()
+                        ? request.toBuilder().setSession(redactSession(request.getSession())).build()
+                        : request);
+    }
+
+    private static String redacted(StreamQuotesRequest request) {
+        return TextFormat.printer().shortDebugString(
+                request.hasSession()
+                        ? request.toBuilder().setSession(redactSession(request.getSession())).build()
+                        : request);
+    }
+
+    private static aurify.lphedge.v1.LpSessionSpec redactSession(aurify.lphedge.v1.LpSessionSpec session) {
+        aurify.lphedge.v1.LpSessionSpec.Builder builder = session.toBuilder();
+        if (builder.hasTrading()) {
+            builder.setTrading(redactFixSession(builder.getTrading()));
+        }
+        if (builder.hasPricing()) {
+            builder.setPricing(redactFixSession(builder.getPricing()));
+        }
+        return builder.build();
+    }
+
+    private static FixSession redactFixSession(FixSession fixSession) {
+        return fixSession.getPassword().isEmpty()
+                ? fixSession
+                : fixSession.toBuilder().setPassword("***").build();
+    }
 
     private SessionStatusResponse sessionStatus(LpSessionEntry entry, String lpAccountId) {
         return SessionStatusResponse.newBuilder()
