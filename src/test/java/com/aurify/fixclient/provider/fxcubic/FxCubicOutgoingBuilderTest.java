@@ -84,6 +84,17 @@ class FxCubicOutgoingBuilderTest {
     }
 
     @Test
+    void decimalVenueQuantityCarriesIntoOrderQty() throws Exception {
+        OutboundPolicy xauPolicy = new OutboundPolicy(Set.of("XAUUSD"), 0L, 0D, 0D);
+        Message nos = builder.build(
+                order().symbol("XAUUSD").orderQty(new BigDecimal("3.21")).build(),
+                xauPolicy, null);
+
+        assertEquals("XAUUSD", nos.getString(Symbol.FIELD));
+        assertEquals(3.21, nos.getDouble(OrderQty.FIELD), 0.0001);
+    }
+
+    @Test
     void aSymbolOutsideTheAllowlistIsRefusedBeforeAnyMessageIsBuilt() {
         assertThrows(IllegalArgumentException.class,
                 () -> builder.build(order().symbol("EURUSD").build(), policy, null));

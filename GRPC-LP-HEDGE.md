@@ -16,6 +16,31 @@ The gateway listens on `0.0.0.0:9090` by default. It accepts the supplied
 5. The response carries `reports` — every report seen while the call was open,
    not only the one that ended it.
 
+## Quantity units
+
+`quantity` (int64, tag 38 as a whole number) is the legacy field. Node now
+prefers `quantity_decimal` - a decimal string in **venue units** (e.g. "3.21"
+troy oz for `XAUUSD`) - whenever it is non-empty; units and rounding are
+Node's decision, the gateway just carries the number through to FIX tag 38
+unchanged. `resolveOrderQty` (`LpHedgeGatewayService`) rejects a non-numeric
+value, a quantity that is not greater than zero, or a scale beyond 8 decimal
+places with `INVALID_QUANTITY`.
+
+`max_quantity` is an optional per-symbol venue-unit cap - a backstop to the
+check Node already does before it ever calls the gateway, not the primary
+enforcement. Left empty, there is no cap here; set, `quantity > max_quantity`
+is rejected with `QUANTITY_ABOVE_MAX` before a session is even touched.
+
+`LpSessionSpec.max_order_size` is unrelated: it is the account-level limit,
+still expressed in grams on the Node side, so comparing it against a venue
+quantity would compare two different units. Node sends it as `0` (disabled)
+now that the per-order cap travels as `max_quantity`; `OutboundPolicy.
+exceedsMaxOrderSize` still exists and still reads `max_order_size`, but now
+takes the order quantity as a `BigDecimal` so a fractional venue quantity is
+compared exactly rather than truncated to a `long` first. Both checks stay
+provider-neutral - neither adapter branches on which provider a request is
+for.
+
 ## Reports that arrive after the call
 
 A venue keeps talking about an order after the RPC has answered: further partial

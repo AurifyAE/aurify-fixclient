@@ -1,5 +1,6 @@
 package com.aurify.fixclient.provider;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 /**
@@ -30,7 +31,15 @@ public record OutboundPolicy(
         return allowedSymbols.isEmpty() || allowedSymbols.contains(symbol);
     }
 
-    public boolean exceedsMaxOrderSize(long quantity) {
-        return maxOrderSize > 0 && quantity > maxOrderSize;
+    /**
+     * {@code maxOrderSize} stays a {@code long} (it is the account-level limit
+     * carried on {@code LpSessionSpec}), but venue quantities are now decimal
+     * (e.g. troy-oz orders like "3.21"), so the comparison itself must be done
+     * in {@link BigDecimal} to avoid truncating a fractional order down to
+     * whatever an intermediate {@code long}/{@code double} conversion produces.
+     */
+    public boolean exceedsMaxOrderSize(BigDecimal quantity) {
+        return maxOrderSize > 0 && quantity != null
+                && quantity.compareTo(BigDecimal.valueOf(maxOrderSize)) > 0;
     }
 }

@@ -79,6 +79,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                                   StreamObserver<SubmitMarketOrderResponse> observer) {
         try {
             validate(request);
+            BigDecimal orderQty = resolveOrderQty(request);
             LpSessionSpec spec = LpSessionSpecMapper.toDomain(request.getSession());
             assertMatchingAccount(request, spec);
 
@@ -93,7 +94,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             if (registration.isOwner()) {
                 try {
                     dispatchService.dispatchOrThrow(
-                            toCanonicalOrder(request, spec, clOrdId),
+                            toCanonicalOrder(request, spec, clOrdId, orderQty),
                             spec.policy(),
                             session.sessionId(),
                             spec.lpAccountId());
@@ -381,7 +382,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     }
 
     private CanonicalOrderRequest toCanonicalOrder(SubmitMarketOrderRequest request,
-                                                   LpSessionSpec spec, String clOrdId) {
+                                                   LpSessionSpec spec, String clOrdId, BigDecimal orderQty) {
         return CanonicalOrderRequest.builder()
                 .provider(spec.provider())
                 .clOrdId(clOrdId)
@@ -392,11 +393,67 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                 .group(blankToNull(request.getBranchId()) != null ? request.getBranchId() : request.getOrganizationId())
                 .symbol(request.getSymbol())
                 .side("SELL".equalsIgnoreCase(request.getSide()) ? CanonicalSide.SELL : CanonicalSide.BUY)
-                .orderQty(BigDecimal.valueOf(request.getQuantity()))
+                .orderQty(orderQty)
                 .ordType(CanonicalOrderRequest.OrdType.MARKET)
                 .timeInForce(resolveTimeInForce(request.getTimeInForce()))
                 .partyId(spec.partyIdOrNull())
                 .build();
+    }
+
+    /**
+     * The venue quantity to trade, in venue units.
+     *
+     * {@code quantity_decimal} (a decimal string, e.g. "3.21" troy oz) is
+     * preferred whenever the caller sends a non-empty value; the legacy
+     * {@code quantity} int64 field is the fallback for callers that predate
+     * decimal quantities. {@code max_quantity}, when non-empty, is a
+     * per-symbol venue-unit cap the gateway enforces as a backstop to Node's
+     * own check - provider-neutral, so it runs here rather than inside an
+     * adapter.
+     *
+     * Package-private and static so it can be unit-tested directly without
+     * standing up the rest of the service.
+     */
+    static BigDecimal resolveOrderQty(SubmitMarketOrderRequest request) {
+        BigDecimal quantity;
+        String decimalRaw = request.getQuantityDecimal();
+        if (decimalRaw != null && !decimalRaw.isBlank()) {
+            try {
+                quantity = new BigDecimal(decimalRaw.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(
+                        "INVALID_QUANTITY: quantity_decimal '" + decimalRaw + "' is not a valid decimal number");
+            }
+        } else {
+            quantity = BigDecimal.valueOf(request.getQuantity());
+        }
+
+        if (quantity.scale() > 8) {
+            throw new IllegalArgumentException(
+                    "INVALID_QUANTITY: quantity " + quantity.toPlainString()
+                            + " has scale " + quantity.scale() + ", which exceeds the maximum of 8 decimal places");
+        }
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("INVALID_QUANTITY: quantity must be greater than zero");
+        }
+
+        String maxRaw = request.getMaxQuantity();
+        if (maxRaw != null && !maxRaw.isBlank()) {
+            BigDecimal max;
+            try {
+                max = new BigDecimal(maxRaw.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(
+                        "INVALID_QUANTITY: max_quantity '" + maxRaw + "' is not a valid decimal number");
+            }
+            if (quantity.compareTo(max) > 0) {
+                throw new IllegalArgumentException(
+                        "QUANTITY_ABOVE_MAX: quantity " + quantity.toPlainString()
+                                + " exceeds max_quantity " + max.toPlainString());
+            }
+        }
+
+        return quantity;
     }
 
     /** Blank means "provider default" - IOC, matching every caller before this field existed. */
@@ -436,7 +493,8 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         required(request.getLpAccountId(), "lp_account_id");
         required(request.getSymbol(), "symbol");
         if (!request.hasSession()) throw new IllegalArgumentException("session is required");
-        if (request.getQuantity() <= 0) throw new IllegalArgumentException("quantity must be greater than zero");
+        // Quantity itself (legacy int vs. quantity_decimal, plus max_quantity)
+        // is validated by resolveOrderQty, called right after this method.
         String side = request.getSide().toUpperCase(Locale.ROOT);
         if (!side.equals("BUY") && !side.equals("SELL")) throw new IllegalArgumentException("side must be BUY or SELL");
         if (!request.getOrderType().isBlank() && !request.getOrderType().equalsIgnoreCase("MARKET"))

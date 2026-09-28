@@ -173,6 +173,23 @@ its own credentials.
 If a logon that used to work starts timing out, check `GET /admin/sessions`
 first: something else is probably still holding that LP's slot.
 
+## Quantity units are Node's decision
+
+`SubmitMarketOrderRequest.quantity` (int64) is the legacy field; Node now
+sends `quantity_decimal` (a decimal string in venue units, e.g. "3.21" troy
+oz) whenever it is non-empty, and the gateway prefers it. The gateway does
+not know or care whether a symbol trades in grams or troy ounces - that
+conversion happens on the Node side (`utils/lpQuantityUnits.js`) before the
+request is built. `quantity_decimal` is validated (non-numeric, ≤ 0, or scale
+> 8 decimal places → `INVALID_QUANTITY`) and, when `max_quantity` is set,
+capped (`QUANTITY_ABOVE_MAX`) in `LpHedgeGatewayService.resolveOrderQty`
+before a session is touched - see `GRPC-LP-HEDGE.md` for the full contract.
+`OutboundPolicy.exceedsMaxOrderSize` takes a `BigDecimal` now so a fractional
+order quantity is compared exactly against `max_order_size` rather than
+truncated to a `long` first; `max_order_size` itself is unaffected by this
+change (Node sends `0`/disabled since the per-order cap moved to
+`max_quantity`).
+
 ## Known gaps
 
 - Market data is out of scope: only trading sessions are established, and

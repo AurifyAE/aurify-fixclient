@@ -97,7 +97,7 @@ public class FinaltoProviderAdapter extends AbstractQuickFixProviderAdapter {
         }
         // The gateway is the last gate before the LP: enforce the caller's own
         // limits here too, rather than trusting that they were checked upstream.
-        if (order.getOrderQty() != null && policy.exceedsMaxOrderSize(order.getOrderQty().longValue())) {
+        if (order.getOrderQty() != null && policy.exceedsMaxOrderSize(order.getOrderQty())) {
             return ValidationResult.reject(
                     "Order quantity " + order.getOrderQty() + " exceeds maxOrderSize " + policy.maxOrderSize());
         }
