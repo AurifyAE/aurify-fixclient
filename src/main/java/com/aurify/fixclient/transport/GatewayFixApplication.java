@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.field.MsgType;
 import quickfix.field.Password;
+import quickfix.field.Text;
 import quickfix.field.Username;
 
 /**
@@ -88,6 +89,28 @@ public class GatewayFixApplication implements Application {
     public void fromAdmin(Message message, SessionID sessionId)
             throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
         logDirection(message, sessionId, FixMessageDirection.INBOUND_ADMIN);
+        logDisconnectReason(message, sessionId);
+    }
+
+    /**
+     * A Logout or session-level Reject is the venue's own words on why a
+     * session did not come up - normally visible only in the raw message dump
+     * at DEBUG. Surfaced at WARN so a rejected session (wrong comp IDs, an
+     * unentitled account, a duplicate connection) is diagnosable from the
+     * default INFO log instead of needing DEBUG turned on after the fact.
+     */
+    private void logDisconnectReason(Message message, SessionID sessionId) throws FieldNotFound {
+        String msgType = message.getHeader().getString(MsgType.FIELD);
+        if (!MsgType.LOGOUT.equals(msgType) && !MsgType.REJECT.equals(msgType)) {
+            return;
+        }
+        String reason = message.isSetField(Text.FIELD) ? message.getString(Text.FIELD) : null;
+        String label = MsgType.LOGOUT.equals(msgType) ? "Logout" : "Reject";
+        if (reason != null) {
+            log.warn("{} from {}: {}", label, sessionId, reason);
+        } else {
+            log.warn("{} from {} with no reason given", label, sessionId);
+        }
     }
 
     @Override
