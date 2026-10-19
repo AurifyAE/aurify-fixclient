@@ -24,8 +24,9 @@ import java.util.Set;
  *  - NoPartyIDs/PartyID/PartyIDSource=D/PartyRole=3 mandatory on NewOrderSingle
  *  - no HandlInst (Market/Limit only, never Stop/StopLimit) and no ClOrdLinkID
  *    (that tag does not exist in this spec)
- *  - all custom tags (5001 MarkUp, 5003 Track) are in the user-defined range,
- *    so no forked data dictionary is needed - just relaxed validation
+ *  - custom tags (5001 MarkUp, 5003 Track) are in the user-defined range, so
+ *    they need only relaxed validation; SettlDate(64) on market data needs
+ *    the FIX44-finalto.xml dictionary
  */
 @Component
 public class FinaltoProviderAdapter extends AbstractQuickFixProviderAdapter {
@@ -114,9 +115,20 @@ public class FinaltoProviderAdapter extends AbstractQuickFixProviderAdapter {
     }
 
     /**
+     * Finalto puts SettlDate(64) on its market data, which the stock FIX44.xml
+     * does not allow on MarketDataSnapshotFullRefresh. With the stock
+     * dictionary QuickFIX rejects every quote (35=3, "Tag not defined for this
+     * message type, field=64") and the pricing session delivers no prices.
+     */
+    @Override
+    public String dataDictionary(String fixVersion) {
+        return "FIX.4.4".equals(fixVersion) ? "FIX44-finalto.xml" : super.dataDictionary(fixVersion);
+    }
+
+    /**
      * Finalto's custom tags (5001 MarkUp, 5003 Track) are both in the
-     * user-defined range (>= 5000), so relaxing validation instead of forking
-     * a dictionary is enough - the stock FIX44.xml is used unchanged.
+     * user-defined range (>= 5000), so relaxing validation is enough for them -
+     * they need no entry in FIX44-finalto.xml.
      */
     @Override
     public boolean validateUserDefinedFields() {
