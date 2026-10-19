@@ -1,0 +1,67 @@
+name: Build FIX gateway
+
+# Push to the deploy branch -> run every test -> rehearse the deploy script ->
+# publish the jar as a GitHub Release. Nothing connects to the server: you
+# install a build on the gateway yourself with one command
+# (/opt/aurify-fixgateway/update.sh - see deploy/README.md).
+
+on:
+  push:
+    branches:
+      - wip-ashik
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create the release
+
+concurrency:
+  group: fix-gateway-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Test and build
+        run: mvn -B verify
+
+      - name: Rehearse deploy script (swap, rollback, prune)
+        run: bash deploy/test-deploy.sh
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          TAG="gateway-${{ github.run_number }}-${GITHUB_SHA::12}"
+          mkdir dist
+          cp "$(ls target/fix-gateway-*.jar | head -1)" dist/fix-gateway.jar
+          cp deploy/deploy.sh deploy/update.sh dist/
+          (cd dist && sha256sum fix-gateway.jar > fix-gateway.jar.sha256)
+
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "FIX gateway build ${{ github.run_number }}" \
+            --notes "Branch \`${GITHUB_REF_NAME}\`, commit ${GITHUB_SHA}. All tests passed. Install on the gateway: \`/opt/aurify-fixgateway/update.sh $TAG\`" \
+            --latest
+          echo "Published $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the newest 15 gateway releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 200 --json tagName --jq '.[].tagName' \
+            | grep '^gateway-' | tail -n +16 \
+            | xargs -r -n1 gh release delete --yes --cleanup-tag
