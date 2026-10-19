@@ -1,13 +1,19 @@
 <!--
-  FIX 4.4 dictionary for Finalto (CFH).
+  FIX 4.4 dictionary for Finalto (CFH), per Finalto FIX API v2.6 sections 4.2.4/4.2.5.
 
-  Identical to the standard FIX44.xml except that SettlDate(64) is allowed on
-  the market data messages, both at message level and inside each NoMDEntries
-  entry, of MarketDataSnapshotFullRefresh(W) and MarketDataIncrementalRefresh(X).
-  Finalto stamps the value date on its prices; the stock dictionary does not
-  list SettlDate for W, so strict validation rejected every quote with
-  "Tag not defined for this message type, field=64" (35=3, 373=2) and the
-  pricing session never delivered a single price.
+  Identical to the standard FIX44.xml except for the price entries
+  (NoMDEntries) of the market data messages, which follow Finalto's own
+  field order:
+    - MarketDataSnapshotFullRefresh (W): 269 270 271 290 64 278
+        adds SettlDate(64) and MDEntryID(278) after MDEntryPositionNo(290)
+    - MarketDataIncrementalRefresh (X): 279 269 278 270 271 290 64 55
+        adds SettlDate(64) after MDEntryPositionNo(290), and moves the
+        Instrument component (Symbol 55) after it
+
+  The stock dictionary allows neither SettlDate nor MDEntryID on W, so strict
+  validation rejected every quote ("Tag not defined for this message type,
+  field=64", 35=3). Group members must also arrive in dictionary order
+  (ValidateUnorderedGroupFields defaults to Y), hence the reordering.
 
   Everything else stays validated.
 -->
@@ -778,7 +784,6 @@
   </message>
   <message name="MarketDataSnapshotFullRefresh" msgtype="W" msgcat="app">
     <field name="MDReqID" required="N"/>
-    <field name="SettlDate" required="N"/>
     <component name="Instrument" required="Y"/>
     <group name="NoUnderlyings" required="N">
       <component name="UnderlyingInstrument" required="N"/>
@@ -796,7 +801,6 @@
       <field name="MDEntrySize" required="N"/>
       <field name="MDEntryDate" required="N"/>
       <field name="MDEntryTime" required="N"/>
-      <field name="SettlDate" required="N"/>
       <field name="TickDirection" required="N"/>
       <field name="MDMkt" required="N"/>
       <field name="TradingSessionID" required="N"/>
@@ -819,6 +823,8 @@
       <field name="MDEntrySeller" required="N"/>
       <field name="NumberOfOrders" required="N"/>
       <field name="MDEntryPositionNo" required="N"/>
+      <field name="SettlDate" required="N"/>
+      <field name="MDEntryID" required="N"/>
       <field name="Scope" required="N"/>
       <field name="PriceDelta" required="N"/>
       <field name="Text" required="N"/>
@@ -830,14 +836,12 @@
   </message>
   <message name="MarketDataIncrementalRefresh" msgtype="X" msgcat="app">
     <field name="MDReqID" required="N"/>
-    <field name="SettlDate" required="N"/>
     <group name="NoMDEntries" required="Y">
       <field name="MDUpdateAction" required="Y"/>
       <field name="DeleteReason" required="N"/>
       <field name="MDEntryType" required="N"/>
       <field name="MDEntryID" required="N"/>
       <field name="MDEntryRefID" required="N"/>
-      <component name="Instrument" required="N"/>
       <group name="NoUnderlyings" required="N">
         <component name="UnderlyingInstrument" required="N"/>
       </group>
@@ -851,7 +855,6 @@
       <field name="MDEntrySize" required="N"/>
       <field name="MDEntryDate" required="N"/>
       <field name="MDEntryTime" required="N"/>
-      <field name="SettlDate" required="N"/>
       <field name="TickDirection" required="N"/>
       <field name="MDMkt" required="N"/>
       <field name="TradingSessionID" required="N"/>
@@ -874,6 +877,8 @@
       <field name="MDEntrySeller" required="N"/>
       <field name="NumberOfOrders" required="N"/>
       <field name="MDEntryPositionNo" required="N"/>
+      <field name="SettlDate" required="N"/>
+      <component name="Instrument" required="N"/>
       <field name="Scope" required="N"/>
       <field name="PriceDelta" required="N"/>
       <field name="NetChgPrevDay" required="N"/>

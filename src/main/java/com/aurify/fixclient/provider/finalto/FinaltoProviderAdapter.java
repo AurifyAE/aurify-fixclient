@@ -25,8 +25,8 @@ import java.util.Set;
  *  - no HandlInst (Market/Limit only, never Stop/StopLimit) and no ClOrdLinkID
  *    (that tag does not exist in this spec)
  *  - custom tags (5001 MarkUp, 5003 Track) are in the user-defined range, so
- *    they need only relaxed validation; SettlDate(64) on market data needs
- *    the FIX44-finalto.xml dictionary
+ *    they need only relaxed validation; SettlDate(64) and MDEntryID(278) on
+ *    market data need the FIX44-finalto.xml dictionary
  */
 @Component
 public class FinaltoProviderAdapter extends AbstractQuickFixProviderAdapter {
@@ -115,10 +115,11 @@ public class FinaltoProviderAdapter extends AbstractQuickFixProviderAdapter {
     }
 
     /**
-     * Finalto puts SettlDate(64) on its market data, which the stock FIX44.xml
-     * does not allow on MarketDataSnapshotFullRefresh. With the stock
-     * dictionary QuickFIX rejects every quote (35=3, "Tag not defined for this
-     * message type, field=64") and the pricing session delivers no prices.
+     * Finalto's price entries carry SettlDate(64) and, on snapshots,
+     * MDEntryID(278) - neither is allowed on MarketDataSnapshotFullRefresh by
+     * the stock FIX44.xml. With the stock dictionary QuickFIX rejects every
+     * quote (35=3, "Tag not defined for this message type, field=64") and the
+     * pricing session delivers no prices.
      */
     @Override
     public String dataDictionary(String fixVersion) {
