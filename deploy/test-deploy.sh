@@ -47,7 +47,13 @@ export PATH="$WORK/bin:$PATH"
 
 FAILURES=0
 pass() { echo "  ok   $*"; }
-fail() { echo "  FAIL $*"; FAILURES=$((FAILURES + 1)); }
+fail() {
+    echo "  FAIL $*"
+    FAILURES=$((FAILURES + 1))
+    # Shows as an annotation on the run, readable without opening the log.
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::error title=deploy rehearsal::FAIL $* | $(tail -n 3 "$WORK/out.log" 2>/dev/null | tr '\n' ' ')"
+    return 0
+}
 check() { local what="$1"; shift; if "$@"; then pass "$what"; else fail "$what"; fi; }
 
 jar() { python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w"); z.writestr("v", sys.argv[2]); z.close()' "$1" "$2"; }
@@ -101,10 +107,12 @@ check "the copied jar itself is left in place" test -f "$WORK/manual.jar"
 
 echo "7) update.sh --rollback returns to the previous successful release"
 before="$(readlink "$APP_DIR/fix-gateway.jar")"
+# Taken now: the rollback installs a copy, and pruning may then remove the original.
+want="$(sha256sum < "$APP_DIR/releases/fix-gateway-5-good.jar")"
 bash "$HERE/update.sh" --rollback > "$WORK/out.log" 2>&1; rc=$?
 check "exit 0" test "$rc" -eq 0
 check "no longer on the manual release" test "$(readlink "$APP_DIR/fix-gateway.jar")" != "$before"
-check "running the same jar content as 5-good" cmp -s "$(readlink "$APP_DIR/fix-gateway.jar")" "$APP_DIR/releases/fix-gateway-5-good.jar"
+check "running the same jar content as 5-good" test "$(sha256sum < "$(readlink "$APP_DIR/fix-gateway.jar")")" = "$want"
 
 echo "8) update.sh --status runs"
 bash "$HERE/update.sh" --status > "$WORK/out.log" 2>&1; rc=$?
