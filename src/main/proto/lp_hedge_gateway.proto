@@ -101,13 +101,15 @@ message SubmitMarketOrderRequest {
   string lp_account_id = 3;
   string symbol = 5;
   string side = 6;
-  int64  quantity = 7;
+  int64  quantity = 7;                  // legacy integer field; superseded by quantity_decimal below
   string order_type = 8;
   string organization_id = 9;
   string branch_id = 10;
   string correlation_id = 11;
   LpSessionSpec session = 12;           // required
   string time_in_force = 13;            // IOC | FOK | GTC | DAY; empty = provider default (IOC)
+  string quantity_decimal = 14;         // venue units, decimal string e.g. "3.21"; preferred over quantity when non-empty
+  string max_quantity = 15;             // per-symbol venue-unit cap; "" = none. Backstop for Node's own check
 }
 
 message SubmitMarketOrderResponse {
