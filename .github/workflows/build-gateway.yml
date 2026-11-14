@@ -48,8 +48,11 @@ jobs:
           TAG="gateway-${{ github.run_number }}-${GITHUB_SHA::12}"
           mkdir dist
           cp "$(ls target/fix-gateway-*.jar | head -1)" dist/fix-gateway.jar
-          cp deploy/deploy.sh deploy/update.sh dist/
+          cp deploy/deploy.sh deploy/update.sh deploy/fake-lp.sh dist/
           (cd dist && sha256sum fix-gateway.jar > fix-gateway.jar.sha256)
+          # Load-test stand-in LP (test code, never deployed as the gateway): see deploy/fake-lp.sh.
+          jar cf dist/fake-lp.jar -C target/test-classes com/aurify/fixclient/loadtest
+          (cd dist && sha256sum fake-lp.jar > fake-lp.jar.sha256)
 
           gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \

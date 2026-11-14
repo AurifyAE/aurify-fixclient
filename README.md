@@ -293,6 +293,11 @@ configurable delays, outcome mix, price drift and rate limit. It accepts any
 comp ID pair on one port, so each test LP account gets its own session. It is
 test code and never ships in the jar.
 
+On a server, each release also publishes `fake-lp.jar` and `fake-lp.sh`.
+`fake-lp.sh install` fetches the jar for the installed gateway release, and
+`fake-lp.sh start` runs it in the background on the gateway's own libraries,
+listening on 127.0.0.1. `status`, `logs` and `stop` manage it. Locally:
+
 ```bash
 mvn test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.aurify.fixclient.loadtest.FakeLp -Dfakelp.profile=fxcubic -Dfakelp.port=9878
 ```

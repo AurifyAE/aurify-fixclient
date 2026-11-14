@@ -108,9 +108,9 @@ public final class FakeLp implements Application {
     public static FakeLp start(FakeLpConfig config) throws ConfigError {
         FakeLp lp = new FakeLp(config);
         lp.listen();
-        System.out.printf("[fake-lp] %s on port %d: ack %dms, fill %dms (+/-%dms), mix fill/partial/noFill/reject "
+        System.out.printf("[fake-lp] %s on port %d (%s): ack %dms, fill %dms (+/-%dms), mix fill/partial/noFill/reject "
                         + "= %d/%d/%d/%d, reference price %s%s%n",
-                config.profile(), config.port(), config.ackDelayMs(), config.fillDelayMs(), config.jitterMs(),
+                config.profile(), config.port(), bindAddress(), config.ackDelayMs(), config.fillDelayMs(), config.jitterMs(),
                 config.fillPct(), config.partialPct(), config.noFillPct(), config.rejectPct(),
                 config.referencePrice().toPlainString(),
                 config.maxOrdersPerSecond() > 0 ? ", limit " + config.maxOrdersPerSecond() + " orders/s" : "");
@@ -138,6 +138,7 @@ public final class FakeLp implements Application {
         SessionID template = new SessionID(config.profile().beginString, "FAKE_LP", "ANY");
         settings.setBool(template, "AcceptorTemplate", true);
         settings.setLong(template, "SocketAcceptPort", config.port());
+        settings.setString(template, "SocketAcceptAddress", bindAddress());
         settings.setString(template, "StartTime", "00:00:00");
         settings.setString(template, "EndTime", "23:59:59");
         settings.setBool(template, "UseDataDictionary", true);
@@ -151,9 +152,14 @@ public final class FakeLp implements Application {
         MessageFactory messages = new DefaultMessageFactory();
         ScreenLogFactory logs = new ScreenLogFactory(false, false, true);
         acceptor = new SocketAcceptor(this, store, settings, logs, messages);
-        acceptor.setSessionProvider(new InetSocketAddress("0.0.0.0", config.port()),
+        acceptor.setSessionProvider(new InetSocketAddress(bindAddress(), config.port()),
                 new DynamicAcceptorSessionProvider(settings, template, this, store, logs, messages));
         acceptor.start();
+    }
+
+    /** Loopback unless told otherwise: on a shared UAT box only the gateway beside it should connect. */
+    static String bindAddress() {
+        return System.getProperty("fakelp.bindAddress", "127.0.0.1");
     }
 
     // ---------------------------------------------------------------- QuickFIX callbacks
@@ -353,6 +359,7 @@ public final class FakeLp implements Application {
             BufferedWriter writer = Files.newBufferedWriter(config.reportFile());
             writer.write(CSV_HEADER);
             writer.newLine();
+            writer.flush();
             return writer;
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot write the fake LP report " + config.reportFile(), e);
