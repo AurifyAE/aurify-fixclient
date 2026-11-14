@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -75,10 +76,13 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
     private final ExecutionJournal executionJournal;
     private final LpQuoteRegistry quoteRegistry;
     private final PricingSessionSubscribers pricingSubscribers;
+    private final OrderLatencyTracker latencyTracker;
 
     @Override
     public void submitMarketOrder(SubmitMarketOrderRequest request,
                                   StreamObserver<SubmitMarketOrderResponse> observer) {
+        long receivedNanos = System.nanoTime();
+        long receivedEpochMs = System.currentTimeMillis();
         log.info("Received SubmitMarketOrder: {}", redacted(request));
         try {
             validate(request);
@@ -89,26 +93,35 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
             // Slow path on the first order for this account: logon happens here.
             LpSessionEntry session = sessionManager.ensureSession(spec, SessionRole.TRADING);
             session.touch();
+            long sessionReadyNanos = System.nanoTime();
+            boolean coldSession = session.loggedOnAtEpochMs() >= receivedEpochMs;
 
             String clOrdId = clOrdId(request);
             PendingOrderRegistry.Registration registration =
                     pendingOrders.register(request.getIdempotencyKey(), clOrdId);
 
+            // Only the call that sends the order is timed; a duplicate submit
+            // waits on the original and would only distort the stages.
+            OrderLatencyTracker.Timeline timeline = null;
             if (registration.isOwner()) {
+                timeline = latencyTracker.start(clOrdId, spec.provider(), receivedNanos, sessionReadyNanos, coldSession);
                 try {
                     dispatchService.dispatchOrThrow(
                             toCanonicalOrder(request, spec, clOrdId, orderQty),
                             spec.policy(),
                             session.sessionId(),
                             spec.lpAccountId());
+                    timeline.markSent();
                 } catch (RuntimeException e) {
                     pendingOrders.discard(request.getIdempotencyKey(), clOrdId);
                     observer.onNext(failure("FIX_SEND_FAILED", e.getMessage()));
                     observer.onCompleted();
+                    latencyTracker.finish(timeline, "send_failed");
                     return;
                 }
             }
 
+            OrderLatencyTracker.Timeline ownTimeline = timeline;
             long timeoutMs = timeoutMs();
             registration.getFuture().orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .whenComplete((report, error) -> {
@@ -118,11 +131,13 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                             observer.onNext(withReports(toFailureResponse(
                                     error, clOrdId, timeoutMs, registration.getLastAck()), clOrdId));
                             observer.onCompleted();
+                            latencyTracker.finish(ownTimeline, latencyOutcome(error));
                         } else {
                             log.info("SubmitMarketOrder {} settled: status={} avgPx={} cumQty={}",
                                     clOrdId, report.getOrdStatus(), report.getAvgPx(), report.getCumQty());
                             observer.onNext(withReports(toResponse(report), clOrdId));
                             observer.onCompleted();
+                            latencyTracker.finish(ownTimeline, report.getOrdStatus().name().toLowerCase(Locale.ROOT));
                         }
                     });
         } catch (LpSessionException e) {
@@ -329,6 +344,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                     .symbols(List.of(symbol))
                     .subscriptionRequestType(CanonicalMarketDataRequest.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES)
                     .marketDepth(1)
+                    .deliverToCompId(pricing.deliverToCompId())
                     .build();
             try {
                 dispatchService.dispatchOrThrow(mdRequest,
@@ -394,8 +410,8 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         observer.onCompleted();
     }
 
-    private CanonicalOrderRequest toCanonicalOrder(SubmitMarketOrderRequest request,
-                                                   LpSessionSpec spec, String clOrdId, BigDecimal orderQty) {
+    CanonicalOrderRequest toCanonicalOrder(SubmitMarketOrderRequest request,
+                                           LpSessionSpec spec, String clOrdId, BigDecimal orderQty) {
         return CanonicalOrderRequest.builder()
                 .provider(spec.provider())
                 .clOrdId(clOrdId)
@@ -407,9 +423,11 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                 .symbol(request.getSymbol())
                 .side("SELL".equalsIgnoreCase(request.getSide()) ? CanonicalSide.SELL : CanonicalSide.BUY)
                 .orderQty(orderQty)
-                .ordType(CanonicalOrderRequest.OrdType.MARKET)
+                .ordType(ordTypeOf(request))
+                .price(limitPriceOf(request))
                 .timeInForce(resolveTimeInForce(request.getTimeInForce()))
                 .partyId(spec.partyIdOrNull())
+                .deliverToCompId(spec.deliverToCompIdOrNull())
                 .build();
     }
 
@@ -469,6 +487,44 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         return quantity;
     }
 
+    /** Blank means MARKET, matching every caller before LIMIT existed. */
+    static CanonicalOrderRequest.OrdType ordTypeOf(SubmitMarketOrderRequest request) {
+        String raw = request.getOrderType().trim();
+        if (raw.isEmpty() || raw.equalsIgnoreCase("MARKET")) return CanonicalOrderRequest.OrdType.MARKET;
+        if (raw.equalsIgnoreCase("LIMIT")) return CanonicalOrderRequest.OrdType.LIMIT;
+        throw new IllegalArgumentException("INVALID_ORDER_TYPE order_type must be MARKET or LIMIT");
+    }
+
+    /**
+     * The limit price, or null for a market order.
+     *
+     * A price on a market order is refused rather than ignored: the caller
+     * believes it has capped the fill, and silently dropping that cap would
+     * send the order at whatever the market is.
+     */
+    static BigDecimal limitPriceOf(SubmitMarketOrderRequest request) {
+        String raw = request.getLimitPrice().trim();
+        if (ordTypeOf(request) == CanonicalOrderRequest.OrdType.MARKET) {
+            if (!raw.isEmpty()) {
+                throw new IllegalArgumentException("INVALID_LIMIT_PRICE limit_price is only valid on a LIMIT order");
+            }
+            return null;
+        }
+        if (raw.isEmpty()) {
+            throw new IllegalArgumentException("INVALID_LIMIT_PRICE limit_price is required for a LIMIT order");
+        }
+        BigDecimal price;
+        try {
+            price = new BigDecimal(raw);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("INVALID_LIMIT_PRICE limit_price is not a number");
+        }
+        if (price.signum() <= 0) {
+            throw new IllegalArgumentException("INVALID_LIMIT_PRICE limit_price must be greater than zero");
+        }
+        return price;
+    }
+
     /** Blank means "provider default" - IOC, matching every caller before this field existed. */
     private CanonicalOrderRequest.TimeInForce resolveTimeInForce(String raw) {
         if (raw == null || raw.isBlank()) {
@@ -500,7 +556,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         return Math.max(1, Math.min(properties.getOrderTimeoutMs(), remaining - RESPONSE_MARGIN_MS));
     }
 
-    private void validate(SubmitMarketOrderRequest request) {
+    void validate(SubmitMarketOrderRequest request) {
         required(request.getIdempotencyKey(), "idempotency_key");
         required(request.getOrderId(), "order_id");
         required(request.getLpAccountId(), "lp_account_id");
@@ -510,8 +566,7 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
         // is validated by resolveOrderQty, called right after this method.
         String side = request.getSide().toUpperCase(Locale.ROOT);
         if (!side.equals("BUY") && !side.equals("SELL")) throw new IllegalArgumentException("side must be BUY or SELL");
-        if (!request.getOrderType().isBlank() && !request.getOrderType().equalsIgnoreCase("MARKET"))
-            throw new IllegalArgumentException("only MARKET orders are supported");
+        limitPriceOf(request); // also checks order_type
     }
 
     /** Guards against an order being routed down another account's session. */
@@ -597,6 +652,15 @@ public class LpHedgeGatewayService extends LpHedgeGatewayGrpc.LpHedgeGatewayImpl
                 .setLeavesQty(decimal(report.getLeavesQty())).setTerminal(isTerminal(report.getOrdStatus()))
                 .setErrorCode(success ? "" : "FIX_ORDER_REJECTED")
                 .setErrorMessage(success ? "" : nullToEmpty(report.getRejectText())).build();
+    }
+
+    /** The outcome tag for an order that did not settle normally. */
+    static String latencyOutcome(Throwable error) {
+        Throwable cause = error instanceof CompletionException && error.getCause() != null
+                ? error.getCause() : error;
+        if (cause instanceof PendingOrderRegistry.OrderRejectedException) return "lp_reject";
+        if (cause instanceof TimeoutException) return "timeout";
+        return "error";
     }
 
     /** An LP reject is a definite answer, not a timeout - report it as such. */

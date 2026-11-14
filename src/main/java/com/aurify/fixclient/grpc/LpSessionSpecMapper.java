@@ -49,7 +49,8 @@ public final class LpSessionSpecMapper {
                 proto.getAccount(),
                 proto.getPartyId(),
                 pricing,
-                pricingFingerprint);
+                pricingFingerprint,
+                proto.getDeliverToCompId());
     }
 
     private static LpSessionSpec.FixSessionSpec toDomain(FixSession proto) {
@@ -65,7 +66,8 @@ public final class LpSessionSpecMapper {
                 proto.getHeartbeatIntervalSeconds(),
                 proto.getServerName(),
                 proto.getStartTime(),
-                proto.getEndTime());
+                proto.getEndTime(),
+                proto.getSenderSubId());
     }
 
     /**
@@ -89,7 +91,9 @@ public final class LpSessionSpecMapper {
                 String.valueOf(t.getHeartbeatIntervalSeconds()),
                 t.getServerName(),
                 t.getStartTime(),
-                t.getEndTime());
+                t.getEndTime(),
+                t.getSenderSubId(),
+                proto.getDeliverToCompId());
         return sha256(material);
     }
 

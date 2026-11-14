@@ -120,4 +120,61 @@ class QuickFixSessionConfigFactoryTest {
         assertEquals("N", settings.getString(sessionId, SSLSupport.SETTING_USE_SNI),
                 "SNI must not outlive the SSL setting that justified it");
     }
+
+    /**
+     * Every existing venue has no SenderSubID. Their SessionID must stay
+     * exactly what it was, because the file store - and with it the sequence
+     * numbers - is keyed on it.
+     */
+    @Test
+    void withoutASenderSubIdTheSessionIdIsUnchanged() {
+        assertEquals(new SessionID("FIX.4.4", "SENDER", "TARGET", "acct-1-TRADING"), idOf(spec(false)));
+    }
+
+    private LpSessionSpec stonexSpec() {
+        return new LpSessionSpec(
+                "acct-stonex", "stonex", "FIX.4.3",
+                new LpSessionSpec.FixSessionSpec(
+                        "fx.example.com", 13976, "order.APITESTINTM.082", "demo.fxgrid",
+                        "API82", "secret", false, false, 30, "", "", "", "APITESTINTM"),
+                Set.of("XAUUSD"), 0L, 0D, 0D, "fp", "", "", null, "", "BRKD");
+    }
+
+    @Test
+    void aSenderSubIdBecomesPartOfTheSessionId() {
+        SessionID sessionId = idOf(stonexSpec());
+
+        assertEquals("APITESTINTM", sessionId.getSenderSubID());
+        assertEquals("order.APITESTINTM.082", sessionId.getSenderCompID());
+        assertEquals("demo.fxgrid", sessionId.getTargetCompID());
+    }
+
+    /** The point of carrying it in the SessionID: QuickFIX/J itself puts tag
+     *  50 on the Logon (and every later message), which StoneX requires. */
+    @Test
+    void quickFixStampsSenderSubIdOnTheLogon() throws Exception {
+        LpSessionSpec spec = stonexSpec();
+        SessionSettings settings = applied(spec);
+        SessionID sessionId = idOf(spec);
+        List<String> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        Session session = new quickfix.DefaultSessionFactory(new quickfix.ApplicationAdapter(),
+                new quickfix.MemoryStoreFactory(), new quickfix.SLF4JLogFactory(new SessionSettings()))
+                .create(sessionId, settings);
+        try {
+            session.setResponder(new quickfix.Responder() {
+                @Override public boolean send(String data) { return sent.add(data); }
+                @Override public void disconnect() { }
+                @Override public String getRemoteAddress() { return "test"; }
+            });
+            session.next();
+
+            assertEquals(1, sent.size(), "expected exactly the Logon, got " + sent);
+            String logon = sent.get(0);
+            assertTrue(logon.contains("\u000135=A\u0001"), logon);
+            assertTrue(logon.contains("\u000150=APITESTINTM\u0001"), "SenderSubID missing from Logon: " + logon);
+        } finally {
+            session.close();
+        }
+    }
 }

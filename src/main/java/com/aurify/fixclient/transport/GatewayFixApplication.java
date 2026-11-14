@@ -4,6 +4,7 @@ import com.aurify.fixclient.config.SessionMetadataRegistry;
 import com.aurify.fixclient.events.GatewayEventPublisher;
 import com.aurify.fixclient.events.SessionConnectedEvent;
 import com.aurify.fixclient.events.SessionDisconnectedEvent;
+import com.aurify.fixclient.grpc.OrderLatencyTracker;
 import com.aurify.fixclient.provider.ProviderAdapterRegistry;
 import com.aurify.fixclient.session.DirectSessionControlService;
 import com.aurify.fixclient.session.LpSessionEntry;
@@ -35,6 +36,7 @@ public class GatewayFixApplication implements Application {
     private final GatewayEventPublisher eventPublisher;
     private final DirectSessionControlService sessionControl;
     private final SessionMetadataRegistry sessionMetadataRegistry;
+    private final OrderLatencyTracker latencyTracker;
 
     @Override
     public void onCreate(SessionID sessionId) {
@@ -122,6 +124,8 @@ public class GatewayFixApplication implements Application {
     public void fromApp(Message message, SessionID sessionId)
             throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
         logDirection(message, sessionId, FixMessageDirection.INBOUND_APP);
+        // The earliest point a report is ours: everything after it is gateway time.
+        latencyTracker.onFixMessageArrived(message);
         // delegate immediately — cracking, mapping, and enqueueing happen
         // off this thread inside the cracker/pipeline, never here.
         messageCracker.crack(message, sessionId);

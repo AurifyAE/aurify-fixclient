@@ -56,6 +56,13 @@ message FixSession {
   string server_name = 10;              // SNI / SSL peer name, optional
   string start_time = 11;               // FIX session window, default 00:00:00
   string end_time = 12;                 // FIX session window, default 23:59:59
+
+  // SenderSubID (tag 50), stamped on the header of every message this session
+  // sends, Logon included. Integral/StoneX require it (your legal-entity ID,
+  // e.g. "APITESTINTM"). Leave empty for venues that do not use it - the
+  // session identity, and with it the stored sequence numbers, is then
+  // exactly what it was before this field existed.
+  string sender_sub_id = 13;
 }
 
 // Everything the gateway needs to talk to one liquidity provider account.
@@ -90,6 +97,12 @@ message LpSessionSpec {
   // spec_fingerprint so editing/adding pricing config never forces a relogon
   // of the trading session, and vice versa.
   string pricing_fingerprint = 13;
+
+  // DeliverToCompID (tag 128): the provider organization behind a multi-LP
+  // venue (StoneX: "BRKD"). Sent on MarketDataRequest, where StoneX requires
+  // it, and on NewOrderSingle, where it restricts matching to that provider.
+  // Left empty, the tag is omitted.
+  string deliver_to_comp_id = 14;
 }
 
 message SubmitMarketOrderRequest {
@@ -102,7 +115,7 @@ message SubmitMarketOrderRequest {
   string symbol = 5;
   string side = 6;
   int64  quantity = 7;                  // legacy integer field; superseded by quantity_decimal below
-  string order_type = 8;
+  string order_type = 8;                // MARKET (default when empty) | LIMIT
   string organization_id = 9;
   string branch_id = 10;
   string correlation_id = 11;
@@ -110,6 +123,7 @@ message SubmitMarketOrderRequest {
   string time_in_force = 13;            // IOC | FOK | GTC | DAY; empty = provider default (IOC)
   string quantity_decimal = 14;         // venue units, decimal string e.g. "3.21"; preferred over quantity when non-empty
   string max_quantity = 15;             // per-symbol venue-unit cap; "" = none. Backstop for Node's own check
+  string limit_price = 16;              // required for LIMIT, invalid for MARKET; decimal string in the venue's price unit
 }
 
 message SubmitMarketOrderResponse {

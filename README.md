@@ -35,9 +35,10 @@ Under `src/main/java/com/aurify/fixclient/`:
   `LpSessionSpec`, `DirectSessionControlService`
 - `canonical/` — provider-agnostic DTOs and enums
 - `provider/` — `LiquidityProviderAdapter` interface, `AbstractQuickFixProviderAdapter`,
-  `ProviderAdapterRegistry`, `OutboundPolicy`, and two concrete adapters:
-  `provider/fxcubic/` (FXCubic FIX API v1.2.2, FIX 4.3) and `provider/finalto/`
-  (Finalto/CFH FIX API v2.6, FIX 4.4). Adding a provider is five files plus
+  `ProviderAdapterRegistry`, `OutboundPolicy`, and three concrete adapters:
+  `provider/fxcubic/` (FXCubic FIX API v1.2.2, FIX 4.3), `provider/finalto/`
+  (Finalto/CFH FIX API v2.6, FIX 4.4) and `provider/stonex/` (StoneX over
+  Integral FX Inside FIX Client API 5.1, FIX 4.3). Adding a provider is five files plus
   `@Component`; the registry indexes every adapter bean by `providerName()`,
   so nothing else in the codebase learns the name. See **Adding a provider**.
 - `pipeline/` — Reactor-based bounded inbound/outbound queues + pipelines
@@ -73,6 +74,65 @@ Fork a data dictionary only if the venue's custom tags are below 5000 (FXCubic
 tag 583 → `FIX43-fxcubic.xml`). Tags at 5000+ are user-defined, so overriding
 `validateUserDefinedFields()` to `false` is enough — that is why Finalto uses
 the stock `FIX44.xml` from `quickfixj-messages-fix44` unchanged.
+
+A venue can also need a header field that is per-account rather than
+per-venue, which no adapter can supply on its own. StoneX was the first, and
+added two optional fields to the contract (both empty for every other venue):
+
+- `FixSession.sender_sub_id` → SenderSubID(50). It goes into the QuickFIX
+  `SessionID`, which is how QuickFIX/J stamps it on every message, Logon
+  included. Empty, the `SessionID` is identical to before, so existing
+  sessions keep their stores and sequence numbers.
+- `LpSessionSpec.deliver_to_comp_id` → DeliverToCompID(128), carried on the
+  canonical order and market-data requests and on `LpSessionEntry` (the
+  post-logon subscribe sees only a `SessionID`).
+
+## StoneX (Integral FX Inside)
+
+Built from *FX Inside FIX Client API 5.1*; **not yet run against the venue's
+demo** - treat the first demo session as the conformance test. The LP account
+for the demo credentials StoneX issued looks like this (values from their
+email; the password belongs in the LP account, never in this repo):
+
+| Field | Order session (`trading`) | Quote session (`pricing`) |
+|---|---|---|
+| host : port | 208.184.46.37 : 13976 | 208.184.46.37 : 13975 |
+| sender_comp_id | `order.APITESTINTM.082` | `quote.APITESTINTM.082` |
+| target_comp_id | `demo.fxgrid` | `demo.fxgrid` |
+| sender_sub_id | `APITESTINTM` | `APITESTINTM` |
+| username / password | `API82` / (issued) | same |
+
+plus `provider: "stonex"`, `fix_version: "FIX.4.3"`,
+`deliver_to_comp_id: "BRKD"`, and symbols in either spelling (`XAUUSD` or
+`XAU/USD`; the wire form is always `XAU/USD`).
+
+What the adapter does differently from the other two:
+
+- NewOrderSingle carries Currency(15) = base currency (so quantity is in
+  ounces for XAU/USD), ExecInst(18)=`B` (without it a market order never
+  crosses), MinQty(110) = 0 for IOC / full quantity for FOK, Product(460)=4,
+  SecurityType(167)=`FOR`.
+- MarketDataRequest carries DeliverToCompID and Product=4 in the symbol group.
+- `OrdStatus=7` (Stopped) is how FX Inside refuses an order - mapped to
+  REJECTED so the caller is answered, not timed out. `C` (Expired) is
+  CANCELLED. Fills arrive as `ExecType=F`, and the New ack may be skipped.
+- `FIX43-stonex.xml`: the ExecutionReport may carry MidPx(631) and a few
+  other sub-5000 tags the stock FIX 4.3 ExecutionReport does not allow, and
+  ExecInst values such as `ST` that are not FIX enums.
+- Quotes: entries with price or size 0, or QuoteCondition=`B` (inactive),
+  are ignored, per the spec; the best remaining bid/offer is reported.
+
+Open with StoneX before trusting it:
+
+- whether plain **Market orders (OrdType=1)** are enabled for this account,
+  or only ESP (OrdType=D against a QuoteEntryID) - the gateway sends Market
+  and Limit only;
+- gold's symbol, unit and minimum size.
+
+Sequence numbers: FX Inside resets them at **17:00 New York time (EST, no
+daylight shift = 22:00 UTC)**, not on logon, so set `reset_seq_num_on_logon:
+false` and a session window around that time, e.g. `start_time: 22:00:30`,
+`end_time: 21:59:30` (QuickFIX session times are UTC).
 
 ## Security
 
@@ -189,6 +249,58 @@ order quantity is compared exactly against `max_order_size` rather than
 truncated to a `long` first; `max_order_size` itself is unaffected by this
 change (Node sends `0`/disabled since the per-order cap moved to
 `max_quantity`).
+
+## Order latency by stage
+
+Every SubmitMarketOrder is timed through its lifecycle by
+`OrderLatencyTracker`, so the gateway's own time can be told apart from the
+LP's:
+
+| Stage | From → to | What it is |
+|---|---|---|
+| `session` | call received → trading session ready | ~0 when warm; the FIX logon on the first order (`session=cold`) |
+| `outbound` | session ready → `sendToTarget` returned | validation, FIX build, message store write |
+| `lp_first_report` | sent → first report reaches `fromApp` | network + LP ack |
+| `lp_terminal_report` | sent → the terminal report reaches `fromApp` | network + LP decision |
+| `inbound` | terminal report in `fromApp` → order settled | cracker, mapping, inbound queue, pipeline, journal |
+| `response` | settled → gRPC response written | journal read and response write |
+| `total` | call received → response written | the whole call as the gateway sees it |
+
+Each finished order logs one line, keyed by ClOrdID (the caller's order id):
+
+```
+Order latency 6718...: total=96.4ms session=0.0ms(warm) outbound=2.1ms lpFirstReport=41.3ms lpTerminalReport=91.7ms inbound=1.9ms response=0.6ms provider=fxcubic outcome=filled
+```
+
+The same stages are Micrometer timers, `fix.order.latency{stage,provider,session,outcome}`,
+with percentile histograms on `/actuator/prometheus`. Example p95 per stage:
+
+```
+histogram_quantile(0.95, sum by (le, stage) (rate(fix_order_latency_seconds_bucket{session="warm"}[5m])))
+```
+
+Outcomes are `filled`, `rejected`, `cancelled`, `lp_reject`, `timeout`,
+`send_failed` and `error`. A stage that was never reached (no report before a
+timeout, say) is left out rather than recorded as zero. Duplicate submits that
+wait on an order already in flight are not timed.
+
+## Fake LP for load tests
+
+`src/test/java/com/aurify/fixclient/loadtest/FakeLp.java` is a stand-in
+liquidity provider: a FIX acceptor that answers each NewOrderSingle with an
+acknowledgement and then a fill, partial fill, no-fill or reject, with
+configurable delays, outcome mix, price drift and rate limit. It accepts any
+comp ID pair on one port, so each test LP account gets its own session. It is
+test code and never ships in the jar.
+
+```bash
+mvn test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.aurify.fixclient.loadtest.FakeLp -Dfakelp.profile=fxcubic -Dfakelp.port=9878
+```
+
+Settings are the `-Dfakelp.*` properties in `FakeLpConfig.fromSystemProperties()`.
+`FakeLpGatewayTest` runs the real gateway against it for both profiles. The
+full load-test procedure, including seeding the API's database, is
+`docs/LOAD_TESTING.md` in Aurify-BullionPro-Nodejs.
 
 ## Known gaps
 

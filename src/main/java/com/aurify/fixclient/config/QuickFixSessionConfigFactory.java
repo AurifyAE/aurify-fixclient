@@ -41,13 +41,23 @@ public class QuickFixSessionConfigFactory {
      * and role only - never from the spec fingerprint - because the file store
      * path is keyed on SessionID, and a changing qualifier would orphan the
      * sequence numbers on every credential edit.
+     *
+     * SenderSubID is part of the SessionID because that is how QuickFIX/J
+     * stamps tag 50 onto the header of every message the session sends, the
+     * Logon included - which Integral/StoneX require. Empty for every other
+     * venue, giving a SessionID equal to the one built before the field
+     * existed, so their stores and sequence numbers are untouched.
      */
     public SessionID sessionIdFor(LpSessionSpec spec, SessionRole role) {
         LpSessionSpec.FixSessionSpec session = sessionOf(spec, role);
         return new SessionID(
                 spec.fixVersion(),
                 session.senderCompId(),
+                session.senderSubId(),
+                SessionID.NOT_SET,
                 session.targetCompId(),
+                SessionID.NOT_SET,
+                SessionID.NOT_SET,
                 spec.lpAccountId() + "-" + role.name());
     }
 

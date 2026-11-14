@@ -23,7 +23,8 @@ public record EnsureSessionRequest(
         Double maxTotalExposure,
         String specFingerprint,
         String account,
-        String partyId
+        String partyId,
+        String deliverToCompId
 ) {
 
     public record TradingSession(
@@ -38,7 +39,8 @@ public record EnsureSessionRequest(
             Integer heartbeatIntervalSeconds,
             String serverName,
             String startTime,
-            String endTime
+            String endTime,
+            String senderSubId
     ) {}
 
     public LpSessionSpec toSpec() {
@@ -58,7 +60,8 @@ public record EnsureSessionRequest(
                 trading.heartbeatIntervalSeconds() == null ? 0 : trading.heartbeatIntervalSeconds(),
                 trading.serverName(),
                 trading.startTime(),
-                trading.endTime());
+                trading.endTime(),
+                trading.senderSubId());
 
         return new LpSessionSpec(
                 lpAccountId,
@@ -77,7 +80,8 @@ public record EnsureSessionRequest(
                 account,
                 partyId,
                 null,  // admin session-control endpoints are trading-only
-                "");
+                "",
+                deliverToCompId);
     }
 
     private String derivedFingerprint(LpSessionSpec.FixSessionSpec session) {
@@ -85,6 +89,7 @@ public record EnsureSessionRequest(
                 provider, fixVersion, session.host(), String.valueOf(session.port()),
                 session.senderCompId(), session.targetCompId(), session.username(),
                 session.password(), String.valueOf(session.useSsl()),
-                String.valueOf(session.resetSeqNumOnLogon())).hashCode());
+                String.valueOf(session.resetSeqNumOnLogon()), session.senderSubId(),
+                String.valueOf(deliverToCompId)).hashCode());
     }
 }

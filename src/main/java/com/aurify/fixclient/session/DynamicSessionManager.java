@@ -155,7 +155,7 @@ public class DynamicSessionManager {
 
         LpSessionEntry entry = new LpSessionEntry(
                 spec.lpAccountId(), role, sessionId, spec.provider(), spec.fingerprintFor(role),
-                spec.allowedSymbols());
+                spec.allowedSymbols(), spec.deliverToCompIdOrNull());
         entry.markConnecting();
         lpSessionRegistry.put(entry);
 

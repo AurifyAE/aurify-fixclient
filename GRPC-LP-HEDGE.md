@@ -5,7 +5,7 @@ The gateway listens on `0.0.0.0:9090` by default. It accepts the supplied
 
 1. The service validates the order and uses `correlation_id` (or `order_id`) as
    the FIX `ClOrdID`.
-2. It constructs a provider-neutral market `CanonicalOrderRequest` and sends it
+2. It constructs a provider-neutral `CanonicalOrderRequest` and sends it
    through the configured provider adapter (`fxcubic` by default).
 3. QuickFIX/J receives an `ExecutionReport`; the existing inbound pipeline maps
    it to `CanonicalExecutionReport` and the `ExecutionJournal` records it.
@@ -15,6 +15,20 @@ The gateway listens on `0.0.0.0:9090` by default. It accepts the supplied
    the ack would report a hedge the venue went on to reject.
 5. The response carries `reports` — every report seen while the call was open,
    not only the one that ended it.
+
+## StoneX fields
+
+Two optional fields exist for `provider: "stonex"` (Integral FX Inside) and
+are ignored when empty, so other providers need no change:
+
+- `FixSession.sender_sub_id` (13) — SenderSubID(50), the legal entity StoneX
+  issued (e.g. `APITESTINTM`). Set it on both the trading and pricing session.
+- `LpSessionSpec.deliver_to_comp_id` (14) — DeliverToCompID(128), the
+  provider behind the venue (e.g. `BRKD`). Required for quotes.
+
+Include both in the caller's `spec_fingerprint` / `pricing_fingerprint`, so
+editing them relogs on; the gateway's own fallback fingerprint already does.
+See the README's StoneX section for a full example account.
 
 ## Quantity units
 
@@ -40,6 +54,20 @@ takes the order quantity as a `BigDecimal` so a fractional venue quantity is
 compared exactly rather than truncated to a `long` first. Both checks stay
 provider-neutral - neither adapter branches on which provider a request is
 for.
+
+## Limit orders
+
+The RPC keeps its name, but `order_type=LIMIT` with `limit_price` sends a limit
+order. `limit_price` is a decimal string in the venue's price unit. A bad
+combination is an `INVALID_ARGUMENT` whose details start with
+`INVALID_ORDER_TYPE` or `INVALID_LIMIT_PRICE`; that includes a price on a market
+order, which is refused rather than sent without its cap.
+
+Neither provider has a resting order: FXCubic is IOC only, Finalto IOC or FOK.
+A limit order that cannot trade at its price is cancelled by the venue, and the
+response is then `success=true`, `status=CANCELLED`, `cum_qty=0`. `success` only
+means the LP did not reject the order. **Read `cum_qty`** to learn what filled:
+it can be zero, or less than was asked for.
 
 ## Reports that arrive after the call
 

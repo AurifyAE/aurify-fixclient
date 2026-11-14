@@ -25,6 +25,9 @@ public class CanonicalOrderRequest implements CanonicalOutboundRequest {
     /** NewOrderSingle PartyID (tag 448) - required by providers that mandate a
      *  NoPartyIDs group (e.g. Finalto). Null/blank: the adapter omits the group. */
     String partyId;
+    /** DeliverToCompID (tag 128) - the provider organization behind a
+     *  multi-LP venue (StoneX). Null: the adapter omits the tag. */
+    String deliverToCompId;
 
     public enum OrdType { MARKET, LIMIT }
     public enum TimeInForce { IOC, FOK, GTC, DAY }

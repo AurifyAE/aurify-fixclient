@@ -26,6 +26,11 @@ public class LpSessionEntry {
      *  later StreamQuotes call asks for a symbol the session was not opened
      *  with, so a reconnect re-subscribes those too. */
     private final Set<String> allowedSymbols = ConcurrentHashMap.newKeySet();
+    /** DeliverToCompID from the spec, for the same reason as allowedSymbols:
+     *  a PRICING session's post-logon subscribe must address the provider
+     *  (StoneX requires tag 128 on MarketDataRequest) but sees only a
+     *  SessionID. Null when the caller set none. */
+    private final String deliverToCompId;
 
     private volatile String specFingerprint;
     private volatile SessionState state = SessionState.ABSENT;
@@ -39,6 +44,13 @@ public class LpSessionEntry {
 
     public LpSessionEntry(String lpAccountId, SessionRole role, SessionID sessionId,
                           String provider, String specFingerprint, Set<String> allowedSymbols) {
+        this(lpAccountId, role, sessionId, provider, specFingerprint, allowedSymbols, null);
+    }
+
+    public LpSessionEntry(String lpAccountId, SessionRole role, SessionID sessionId,
+                          String provider, String specFingerprint, Set<String> allowedSymbols,
+                          String deliverToCompId) {
+        this.deliverToCompId = deliverToCompId == null || deliverToCompId.isBlank() ? null : deliverToCompId;
         this.lpAccountId = lpAccountId;
         this.role = role;
         this.sessionId = sessionId;
@@ -54,6 +66,8 @@ public class LpSessionEntry {
     public SessionRole role() { return role; }
     public SessionID sessionId() { return sessionId; }
     public String provider() { return provider; }
+    /** DeliverToCompID (tag 128), or null when the caller set none. */
+    public String deliverToCompId() { return deliverToCompId; }
     /** Snapshot - safe to iterate while another call adds symbols. */
     public Set<String> allowedSymbols() { return Set.copyOf(allowedSymbols); }
 

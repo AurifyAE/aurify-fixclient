@@ -26,8 +26,18 @@ public record LpSessionSpec(
         String account,
         String partyId,
         FixSessionSpec pricing,
-        String pricingFingerprint
+        String pricingFingerprint,
+        String deliverToCompId
 ) {
+
+    /** Spec without a DeliverToCompID - every venue except StoneX/Integral. */
+    public LpSessionSpec(String lpAccountId, String provider, String fixVersion, FixSessionSpec trading,
+                         Set<String> allowedSymbols, long maxOrderSize, double maxPositionPerSymbol,
+                         double maxTotalExposure, String specFingerprint, String account, String partyId,
+                         FixSessionSpec pricing, String pricingFingerprint) {
+        this(lpAccountId, provider, fixVersion, trading, allowedSymbols, maxOrderSize, maxPositionPerSymbol,
+                maxTotalExposure, specFingerprint, account, partyId, pricing, pricingFingerprint, "");
+    }
 
     public LpSessionSpec {
         lpAccountId = requireText(lpAccountId, "lpAccountId");
@@ -41,6 +51,7 @@ public record LpSessionSpec(
         // pricing is intentionally nullable: most LP accounts have no pricing
         // session configured, and this must never fail construction.
         pricingFingerprint = blankTo(pricingFingerprint, "");
+        deliverToCompId = blankTo(deliverToCompId, "");
     }
 
     /** Same spec with a different symbol allowlist. Fingerprints are untouched,
@@ -48,7 +59,12 @@ public record LpSessionSpec(
     public LpSessionSpec withAllowedSymbols(Set<String> symbols) {
         return new LpSessionSpec(lpAccountId, provider, fixVersion, trading, symbols,
                 maxOrderSize, maxPositionPerSymbol, maxTotalExposure, specFingerprint,
-                account, partyId, pricing, pricingFingerprint);
+                account, partyId, pricing, pricingFingerprint, deliverToCompId);
+    }
+
+    /** DeliverToCompID (tag 128), or null when the caller set none. */
+    public String deliverToCompIdOrNull() {
+        return deliverToCompId.isEmpty() ? null : deliverToCompId;
     }
 
     /** The LP-side account for FIX tag 1, or null when the caller set none. */
@@ -89,6 +105,7 @@ public record LpSessionSpec(
                 + ", allowedSymbols=" + allowedSymbols
                 + ", maxOrderSize=" + maxOrderSize
                 + ", account=" + account
+                + ", deliverToCompId=" + deliverToCompId
                 + ", fingerprint=" + specFingerprint
                 + ", pricingFingerprint=" + pricingFingerprint + "]";
     }
@@ -106,8 +123,17 @@ public record LpSessionSpec(
             int heartbeatIntervalSeconds,
             String serverName,
             String startTime,
-            String endTime
+            String endTime,
+            String senderSubId
     ) {
+        /** Session without a SenderSubID - every venue except StoneX/Integral. */
+        public FixSessionSpec(String host, int port, String senderCompId, String targetCompId,
+                              String username, String password, boolean useSsl, boolean resetSeqNumOnLogon,
+                              int heartbeatIntervalSeconds, String serverName, String startTime, String endTime) {
+            this(host, port, senderCompId, targetCompId, username, password, useSsl, resetSeqNumOnLogon,
+                    heartbeatIntervalSeconds, serverName, startTime, endTime, "");
+        }
+
         public FixSessionSpec {
             host = requireText(host, "host");
             senderCompId = requireText(senderCompId, "senderCompId");
@@ -118,6 +144,7 @@ public record LpSessionSpec(
             heartbeatIntervalSeconds = heartbeatIntervalSeconds > 0 ? heartbeatIntervalSeconds : 30;
             startTime = blankTo(startTime, "00:00:00");
             endTime = blankTo(endTime, "23:59:59");
+            senderSubId = blankTo(senderSubId, "");
         }
 
         /** Redacts the password - this is what ends up in logs. */
@@ -126,6 +153,7 @@ public record LpSessionSpec(
             return "FixSessionSpec[" + host + ":" + port
                     + ", sender=" + senderCompId
                     + ", target=" + targetCompId
+                    + (senderSubId.isEmpty() ? "" : ", senderSubId=" + senderSubId)
                     + ", username=" + username
                     + ", password=" + (password == null || password.isEmpty() ? "<none>" : "***")
                     + ", ssl=" + useSsl

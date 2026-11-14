@@ -16,6 +16,9 @@ public class CanonicalMarketDataRequest implements CanonicalOutboundRequest {
     List<String> symbols;
     SubscriptionRequestType subscriptionRequestType;
     int marketDepth;
+    /** DeliverToCompID (tag 128) - required by StoneX on every
+     *  MarketDataRequest; ignored by venues that do not use it. */
+    String deliverToCompId;
 
     /** Mirrors FIX tag 263 (SubscriptionRequestType). SNAPSHOT (0) is
      *  intentionally omitted - the gateway only ever wants live updates or to
